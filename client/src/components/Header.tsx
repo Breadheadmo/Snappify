@@ -3,12 +3,14 @@ import { Link } from 'react-router-dom';
 import { Menu, X, Search, ShoppingCart, Heart, User, ChevronDown } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import { useWishlist } from '../contexts/WishlistContext';
+import { useAuth } from '../contexts/AuthContext';
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const { state: cartState } = useCart();
   const { state: wishlistState } = useWishlist();
+  const { isAuthenticated, logout, user } = useAuth();
 
   const navigation = [
     { name: 'Home', href: '/' },
@@ -122,28 +124,53 @@ const Header: React.FC = () => {
               </button>
               <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
                 <div className="py-2">
-                  <Link
-                    to="/profile"
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors"
-                  >
-                    Profile
-                  </Link>
-                  <Link
-                    to="/orders"
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors"
-                  >
-                    Orders
-                  </Link>
-                  <Link
-                    to="/wishlist"
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors"
-                  >
-                    Wishlist
-                  </Link>
-                  <div className="border-t border-gray-200 my-1"></div>
-                  <button className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors">
-                    Sign Out
-                  </button>
+                {isAuthenticated ? (
+                  <>
+                    <div className="px-4 py-2 text-sm text-gray-500">
+                      Welcome, {user?.username || 'User'}
+                    </div>
+                    <Link
+                      to="/profile"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors"
+                    >
+                      Profile
+                    </Link>
+                    <Link
+                      to="/orders"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors"
+                    >
+                      Orders
+                    </Link>
+                    <Link
+                      to="/wishlist"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors"
+                    >
+                      Wishlist
+                    </Link>
+                    <div className="border-t border-gray-200 my-1"></div>
+                    <button 
+                      onClick={logout}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors"
+                    >
+                      Sign Out
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      to="/login"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors"
+                    >
+                      Sign In
+                    </Link>
+                    <Link
+                      to="/signup"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors"
+                    >
+                      Create Account
+                    </Link>
+                  </>
+                )}
                 </div>
               </div>
             </div>

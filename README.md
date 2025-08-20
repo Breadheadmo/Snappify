@@ -1,229 +1,199 @@
-# TechStore - Modern E-commerce Website
+# Snappy E-commerce Platform
 
-A professional, modern e-commerce website built with React, TypeScript, Node.js, and Tailwind CSS. Perfect for selling tech products like chargers, audio devices, and more.
+A modern e-commerce website built with React, TypeScript, Node.js, Express, and MongoDB.
 
-## 🚀 Features
-
-- **Modern Design**: Clean, professional UI with responsive design
-- **Product Catalog**: Browse products by category with search and filtering
-- **Product Details**: Comprehensive product pages with image galleries
-- **Shopping Cart**: Full cart functionality with quantity controls
-- **Responsive**: Mobile-first design that works on all devices
-- **Fast Performance**: Optimized React components and efficient routing
-- **Search & Filter**: Advanced product search and category filtering
-- **Professional UI**: Beautiful animations and smooth transitions
-
-## 🛠️ Tech Stack
-
-### Frontend
-- **React 18** - Modern React with hooks
-- **TypeScript** - Type-safe development
-- **Tailwind CSS** - Utility-first CSS framework
-- **React Router** - Client-side routing
-- **Lucide React** - Beautiful icons
-
-### Backend
-- **Node.js** - JavaScript runtime
-- **Express.js** - Web framework
-- **CORS** - Cross-origin resource sharing
-- **Helmet** - Security middleware
-- **Morgan** - HTTP request logger
-
-## 📁 Project Structure
+## Project Structure
 
 ```
-Ecom/
-├── client/                 # React frontend
-│   ├── public/            # Static assets
-│   ├── src/               # Source code
-│   │   ├── components/    # Reusable components
-│   │   ├── pages/         # Page components
-│   │   ├── App.tsx        # Main app component
-│   │   └── index.tsx      # Entry point
-│   ├── package.json       # Frontend dependencies
-│   └── tailwind.config.js # Tailwind configuration
-├── server/                 # Node.js backend
-│   └── index.js           # Express server
-├── package.json            # Root dependencies
-└── README.md              # This file
+Snappy/
+├── client/                  # React frontend
+│   ├── public/              # Static assets
+│   ├── src/                 # Source code
+│   │   ├── components/      # Reusable components
+│   │   ├── contexts/        # React contexts (Auth, Cart, etc.)
+│   │   ├── pages/           # Page components
+│   │   ├── types/           # TypeScript type definitions
+│   │   ├── services/        # API services
+│   │   ├── App.tsx          # Main app component
+│   │   └── index.tsx        # Entry point
+│   ├── package.json         # Frontend dependencies
+│   └── tailwind.config.js   # Tailwind configuration
+├── server/                  # Express backend
+│   ├── config/              # Configuration files
+│   ├── controllers/         # Request handlers
+│   ├── data/                # Seed data
+│   ├── middleware/          # Express middleware
+│   ├── models/              # Mongoose models
+│   ├── routes/              # Express routes
+│   ├── scripts/             # Utility scripts
+│   ├── utils/               # Utility functions
+│   ├── server.js            # Entry point
+│   └── package.json         # Backend dependencies
+├── init-db.bat              # Script to initialize the database
+├── start-app.bat            # Script to start both frontend and backend
+└── package.json             # Root package.json
 ```
 
-## 🚀 Getting Started
+## Features
+
+- Modern, responsive UI built with Tailwind CSS
+- Product catalog with search and filtering
+- Shopping cart functionality
+- User authentication with JWT
+- Wishlist management
+- Product detail pages
+- Order placement and history
+- MongoDB Atlas database integration
+
+## Getting Started
 
 ### Prerequisites
-- Node.js (v16 or higher)
+- Node.js (v14 or higher)
 - npm or yarn
+- MongoDB Atlas account (or local MongoDB installation)
 
 ### Installation
 
 1. **Clone the repository**
    ```bash
-   git clone <your-repo-url>
-   cd Ecom
+   git clone https://github.com/yourusername/Snappy.git
+   cd Snappy
    ```
 
 2. **Install dependencies**
    ```bash
-   # Install root dependencies
+   # Install backend dependencies
+   cd server
    npm install
-   
+
    # Install frontend dependencies
-   cd client
+   cd ../client
    npm install
-   cd ..
    ```
 
-3. **Start the development servers**
+3. **Set up environment variables**
+
+   a. Create or edit `.env` file in the server directory:
+   ```
+   NODE_ENV=development
+   PORT=5000
+   MONGO_URI=your_mongodb_connection_string
+   JWT_SECRET=your_jwt_secret
+   JWT_EXPIRE=30d
+   ```
+
+   b. Create or edit `.env` file in the client directory:
+   ```
+   REACT_APP_API_URL=http://localhost:5000/api
+   REACT_APP_USE_MOCK_DATA=false
+   ```
+
+4. **Initialize the database**
    ```bash
-   # Start both frontend and backend (recommended)
-   npm run dev
-   
-   # Or start them separately:
-   npm run server    # Backend on port 5000
-   npm run client    # Frontend on port 3000
+   cd ..
+   init-db.bat
    ```
 
-4. **Open your browser**
+5. **Start the application**
+   ```bash
+   start-app.bat
+   ```
+
+### Alternative Manual Startup
+
+1. **Start the backend server**
+   ```bash
+   cd server
+   npm run dev
+   ```
+
+2. **Start the frontend client (in a separate terminal)**
+   ```bash
+   cd client
+   npm start
+   ```
+
+3. **Open your browser**
    - Frontend: http://localhost:3000
-   - Backend API: http://localhost:5000
+   - Backend API: http://localhost:5000/api
 
-## 📱 Available Scripts
+## Usage
 
-- `npm run dev` - Start both frontend and backend
-- `npm run server` - Start backend server only
-- `npm run client` - Start frontend development server
-- `npm run build` - Build frontend for production
-- `npm run install-all` - Install all dependencies
+### User Accounts
 
-## 🌟 Key Features Explained
+The database is seeded with the following accounts:
 
-### 1. Product Catalog
-- Grid and list view options
-- Category filtering
-- Price and rating sorting
-- Search functionality
-- Responsive product cards
+- Admin User:
+  - Email: admin@example.com
+  - Password: password123
 
-### 2. Product Details
-- High-quality image galleries
-- Detailed product information
-- Feature lists
-- Add to cart functionality
-- Breadcrumb navigation
+- Regular User:
+  - Email: john@example.com
+  - Password: password123
 
-### 3. Shopping Cart
-- Add/remove items
-- Quantity controls
-- Real-time price calculations
-- Order summary
-- Checkout process
+### Development Modes
 
-### 4. Responsive Design
-- Mobile-first approach
-- Touch-friendly interfaces
-- Adaptive layouts
-- Fast loading times
+#### Using Mock Data
 
-## 🎨 Customization
+If you want to develop without connecting to the backend API, you can set `REACT_APP_USE_MOCK_DATA=true` in the client's `.env` file. This will use the mock data instead of making API calls.
 
-### Colors
-Edit `client/tailwind.config.js` to customize the color scheme:
-```javascript
-colors: {
-  primary: {
-    50: '#eff6ff',
-    100: '#dbeafe',
-    // ... customize your brand colors
-  }
-}
-```
+#### Using Real API
+
+To use the real API, set `REACT_APP_USE_MOCK_DATA=false` in the client's `.env` file.
+
+## API Endpoints
+
+### Authentication
+- `POST /api/users/login` - User login
+- `POST /api/users` - Register a new user
+- `GET /api/users/profile` - Get user profile
+- `PUT /api/users/profile` - Update user profile
+- `POST /api/users/change-password` - Change password
+- `POST /api/users/forgot-password` - Request password reset
+- `POST /api/users/reset-password` - Reset password with token
 
 ### Products
-Add your products in `server/index.js`:
-```javascript
-const products = [
-  {
-    id: 1,
-    name: "Your Product Name",
-    category: "Your Category",
-    price: 29.99,
-    // ... other properties
-  }
-];
-```
+- `GET /api/products` - Get all products
+- `GET /api/products/:id` - Get a product by ID
+- `GET /api/products/featured` - Get featured products
+- `GET /api/products/:id/related` - Get related products
+- `GET /api/products/categories` - Get all categories
+- `GET /api/products/brands` - Get all brands
+- `GET /api/products/search` - Search products
 
-### Styling
-- Modify `client/src/index.css` for global styles
-- Use Tailwind utility classes for component styling
-- Customize component-specific styles in each component file
+### Wishlist
+- `GET /api/users/wishlist` - Get user's wishlist
+- `POST /api/users/wishlist` - Add product to wishlist
+- `DELETE /api/users/wishlist/:id` - Remove product from wishlist
+- `GET /api/users/wishlist/check/:id` - Check if product is in wishlist
 
-## 🔧 API Endpoints
+### Cart
+- `GET /api/cart/items` - Get user's cart
+- `POST /api/cart/items` - Add product to cart
+- `PUT /api/cart/items/:id` - Update cart item quantity
+- `DELETE /api/cart/items/:id` - Remove product from cart
+- `DELETE /api/cart` - Clear cart
 
-- `GET /api/products` - Get all products (with optional filters)
-- `GET /api/products/:id` - Get specific product
-- `GET /api/categories` - Get all categories
-- `GET /api/health` - Health check endpoint
+### Orders
+- `POST /api/orders/checkout` - Place an order
+- `GET /api/orders` - Get user's orders
+- `GET /api/orders/:id` - Get order by ID
+- `POST /api/orders/:id/cancel` - Cancel an order
 
-### Query Parameters
-- `category` - Filter by category
-- `search` - Search products by name/description
-- `sort` - Sort by price or rating
+## Available Scripts
 
-## 📱 Responsive Breakpoints
+### Frontend
+- `npm start` - Start frontend development server
+- `npm run build` - Build frontend for production
+- `npm test` - Run frontend tests
 
-- **Mobile**: < 768px
-- **Tablet**: 768px - 1024px
-- **Desktop**: > 1024px
+### Backend
+- `npm start` - Start backend production server
+- `npm run dev` - Start backend development server with nodemon
+- `npm test` - Run backend tests
+- `npm run data:import` - Import seed data to the database
+- `npm run data:destroy` - Clear all data from the database
 
-## 🚀 Deployment
-
-### Frontend (React)
-```bash
-cd client
-npm run build
-# Deploy the 'build' folder to your hosting service
-```
-
-### Backend (Node.js)
-```bash
-# Set environment variables
-PORT=5000
-NODE_ENV=production
-
-# Start the server
-npm run server
-```
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-## 📄 License
+## License
 
 This project is licensed under the MIT License.
-
-## 🆘 Support
-
-If you need help or have questions:
-- Check the documentation
-- Review the code comments
-- Open an issue on GitHub
-
-## 🔮 Future Enhancements
-
-- User authentication and accounts
-- Payment processing integration
-- Order management system
-- Admin dashboard
-- Product reviews and ratings
-- Wishlist functionality
-- Email notifications
-- Analytics and reporting
-
----
-
-**Built with ❤️ using modern web technologies**

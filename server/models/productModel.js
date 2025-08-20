@@ -28,6 +28,10 @@ const reviewSchema = mongoose.Schema(
 
 const productSchema = mongoose.Schema(
   {
+    id: {
+      type: Number,
+      unique: true,
+    },
     name: {
       type: String,
       required: true,

@@ -2,6 +2,8 @@ const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const morgan = require('morgan');
+// Load polyfill to fix deprecation warning
+require('./utils/polyfill');
 const connectDB = require('./config/db');
 const path = require('path');
 const { errorHandler } = require('./middleware/errorMiddleware');
@@ -29,6 +31,7 @@ app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/cart', require('./routes/cartRoutes'));
 app.use('/api/wishlist', require('./routes/wishlistRoutes'));
+app.use('/api/profile', require('./routes/profile'));
 
 // Set static folder in production
 if (process.env.NODE_ENV === 'production') {

@@ -187,7 +187,7 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
           <div className="flex items-center justify-center space-x-2">
             <ShoppingCart className="h-4 w-4" />
             <span>
-              {isInCart(product.id) 
+              {isInCart(product.id.toString()) 
                 ? 'In Cart' 
                 : product.inStock 
                   ? 'Add to Cart' 

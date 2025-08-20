@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
 import type { Product } from '../types/Product';
 import { mockProducts, mockCategories, mockBrands } from '../types/Product';
+// import { productApi } from '../services/api';
 
 interface SearchState {
   query: string;
@@ -180,6 +181,20 @@ export const SearchProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     results: mockProducts,
     totalResults: mockProducts.length
   });
+
+  // Load categories and brands on mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch categories and brands - using mock data for now
+        console.log('Brands:', mockBrands);
+      } catch (error) {
+        console.error('Error fetching search filters:', error);
+      }
+    };
+    
+    fetchData();
+  }, []);
 
   const setQuery = (query: string) => {
     dispatch({ type: 'SET_QUERY', payload: query });

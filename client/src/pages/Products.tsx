@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Grid, List, Star, ShoppingCart } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
@@ -8,9 +8,9 @@ import { useSearch } from '../contexts/SearchContext';
 import { useCart } from '../contexts/CartContext';
 
 const Products: React.FC = () => {
-  const { state: searchState, setCategory, setQuery, setSortBy, searchProducts } = useSearch();
+  const { state: searchState, setCategory, setQuery, searchProducts } = useSearch();
   const { addToCart } = useCart();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   const category = searchParams.get('category') || 'all';
@@ -26,21 +26,6 @@ const Products: React.FC = () => {
     }
     searchProducts();
   }, [category, search, setCategory, setQuery, searchProducts]);
-
-  const handleCategoryChange = (newCategory: string) => {
-    const newParams = new URLSearchParams(searchParams);
-    if (newCategory === 'all') {
-      newParams.delete('category');
-    } else {
-      newParams.set('category', newCategory);
-    }
-    setSearchParams(newParams);
-  };
-
-  const handleSortChange = (newSort: string) => {
-    setSortBy(newSort);
-    searchProducts();
-  };
 
   const handleAddToCart = (product: Product) => {
     addToCart(product);
