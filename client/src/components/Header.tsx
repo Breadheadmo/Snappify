@@ -129,12 +129,31 @@ const Header: React.FC = () => {
                     <div className="px-4 py-2 text-sm text-gray-500">
                       Welcome, {user?.username || 'User'}
                     </div>
+                    {user?.isAdmin && (
+                      <>
+                        <Link
+                          to="/admin"
+                          className="block px-4 py-2 text-sm text-blue-700 hover:bg-blue-50 hover:text-blue-800 font-medium transition-colors"
+                        >
+                          🔧 Admin Dashboard
+                        </Link>
+                        <div className="border-t border-gray-200 my-1"></div>
+                      </>
+                    )}
                     <Link
                       to="/profile"
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors"
                     >
                       Profile
                     </Link>
+                    {user?.isAdmin && (
+                      <Link
+                        to="/admin"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors"
+                      >
+                        Admin Dashboard
+                      </Link>
+                    )}
                     <Link
                       to="/orders"
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-primary-600 transition-colors"

@@ -1,5 +1,6 @@
 export interface Product {
   id: number;
+  _id?: string; // MongoDB ObjectId
   name: string;
   price: number;
   originalPrice?: number;
@@ -8,7 +9,9 @@ export interface Product {
   images?: string[];
   rating: number;
   reviews: number;
+  numReviews?: number; // Backend uses numReviews instead of reviews
   inStock: boolean;
+  countInStock?: number; // Backend includes stock count
   category: string;
   brand: string;
   description: string;
@@ -19,8 +22,8 @@ export interface Product {
   weight: string;
   dimensions: string;
   warranty: string;
-  returnPolicy: string;
-  shippingInfo: string;
+  returnPolicy?: string;
+  shippingInfo?: string;
 }
 
 export interface CartItem {

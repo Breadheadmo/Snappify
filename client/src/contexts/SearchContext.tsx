@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
 import type { Product } from '../types/Product';
 import { mockProducts, mockCategories, mockBrands } from '../types/Product';
-// import { productApi } from '../services/api';
+import { productApi } from '../services/api';
 
 interface SearchState {
   query: string;

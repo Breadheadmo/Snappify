@@ -27,8 +27,16 @@ const Products: React.FC = () => {
     searchProducts();
   }, [category, search, setCategory, setQuery, searchProducts]);
 
-  const handleAddToCart = (product: Product) => {
-    addToCart(product);
+  const handleAddToCart = async (product: Product) => {
+    try {
+      await addToCart(product);
+      // You could add a success notification here
+      console.log(`Added ${product.name} to cart successfully`);
+    } catch (error) {
+      console.error('Failed to add product to cart:', error);
+      // You could add an error notification here
+      alert('Failed to add product to cart. Please try again.');
+    }
   };
 
   const renderStars = (rating: number) => {

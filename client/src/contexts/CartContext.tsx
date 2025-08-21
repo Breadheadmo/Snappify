@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect, ReactNode, useState } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import type { Product, CartItem } from '../types/Product';
 import { cartApi } from '../services/api';
 import { useAuth } from './AuthContext';
@@ -170,11 +170,13 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       if (isAuthenticated) {
         // Fetch cart from API if user is authenticated
+        console.log('Loading cart from API for authenticated user');
         const cartData = await cartApi.getCart();
         const formattedItems = formatCartItems(cartData.items);
         dispatch({ type: 'LOAD_CART', payload: formattedItems });
       } else {
         // Use localStorage for guest users
+        console.log('Loading cart from localStorage for guest user');
         const savedCart = localStorage.getItem('cart');
         if (savedCart) {
           try {
@@ -190,13 +192,25 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     } catch (error) {
       console.error('Error fetching cart data:', error);
-      dispatch({ type: 'LOAD_CART', payload: [] });
+      // For unauthenticated users, fall back to localStorage
+      if (!isAuthenticated) {
+        try {
+          const savedCart = localStorage.getItem('cart');
+          const parsedCart = savedCart ? JSON.parse(savedCart) : [];
+          dispatch({ type: 'LOAD_CART', payload: parsedCart });
+        } catch (e) {
+          dispatch({ type: 'LOAD_CART', payload: [] });
+        }
+      } else {
+        dispatch({ type: 'LOAD_CART', payload: [] });
+      }
     }
   };
 
   // Load cart on mount and when auth state changes
   useEffect(() => {
     loadCart();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
   // Save cart to localStorage for guest users
@@ -212,19 +226,29 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const addToCart = async (product: Product, quantity: number = 1) => {
-    // Optimistically update the UI
-    dispatch({ type: 'ADD_ITEM', payload: product, quantity });
-    
     try {
       if (isAuthenticated) {
-        // Call API to add to cart if user is authenticated
+        // For authenticated users, call API first, then update UI based on response
+        console.log(`Adding ${quantity} of product ${product.id} to cart via API`);
         const response = await cartApi.addToCart(product.id.toString(), quantity);
-        console.log('Cart response:', response);
+        console.log('Cart API response:', response);
+        
+        // Refresh cart from server to get the correct state
+        await loadCart();
+      } else {
+        // For guest users, update local state only
+        dispatch({ type: 'ADD_ITEM', payload: product, quantity });
       }
     } catch (error) {
       console.error('Error adding to cart:', error);
-      // Reload cart to get correct state in case of error
-      await loadCart();
+      
+      // If there's an error and user is authenticated, reload cart from server
+      if (isAuthenticated) {
+        await loadCart();
+      }
+      
+      // Re-throw the error so UI can handle it
+      throw error;
     }
   };
 

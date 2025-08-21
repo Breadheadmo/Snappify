@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { authApi } from '../services/api';
 
 interface AuthContextType {
   user: User | null;
@@ -13,6 +14,7 @@ interface User {
   username: string;
   email: string;
   profilePicture?: string;
+  isAdmin?: boolean;
   settings?: {
     notifications: boolean;
     language: string;
@@ -38,33 +40,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await fetch('http://localhost:5000/api/users/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Login failed');
-      }
-
-      const data = await response.json();
-      localStorage.setItem('token', data.token);
+      const loginResponse: any = await authApi.login(email, password);
+      localStorage.setItem('token', loginResponse.token);
       setIsAuthenticated(true);
       
-      // Set user data from response
-      const userData = {
-        id: data._id,
-        username: data.username,
-        email: data.email,
-        profilePicture: data.profilePicture
+      // Set user data from response - handle both possible response formats
+      const userData = loginResponse.user || loginResponse;
+      const userForContext = {
+        id: userData.id || userData._id,
+        username: userData.username,
+        email: userData.email,
+        profilePicture: userData.profilePicture || '',
+        isAdmin: userData.isAdmin || false
       };
       
-      setUser(userData);
-      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userForContext);
+      localStorage.setItem('user', JSON.stringify(userForContext));
     } catch (error) {
       throw error;
     }
@@ -72,20 +63,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const register = async (username: string, email: string, password: string) => {
     try {
-      const response = await fetch('http://localhost:5000/api/users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, email, password }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Registration failed');
-      }
-
-      // After successful registration, you might want to log the user in automatically
+      await authApi.register(username, email, password);
+      
+      // After successful registration, log the user in automatically
       await login(email, password);
     } catch (error) {
       throw error;

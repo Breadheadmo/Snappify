@@ -3,7 +3,37 @@ import { Product, CartItem, mockProducts, mockCategories, mockBrands } from '../
 import { User } from '../types/User';
 
 // Base API URL - connects to our new Express backend
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+console.log('API_BASE_URL:', API_BASE_URL); // Debug log
+
+/**
+ * Helper function to transform backend product format to frontend format
+ */
+const transformBackendProduct = (backendProduct: any): Product => {
+  return {
+    id: backendProduct.id || parseInt(backendProduct._id.slice(-6), 16), // Use numeric ID or generate from ObjectId
+    _id: backendProduct._id,
+    name: backendProduct.name,
+    price: backendProduct.price,
+    originalPrice: backendProduct.originalPrice,
+    image: Array.isArray(backendProduct.images) ? backendProduct.images[0] : backendProduct.image,
+    images: backendProduct.images || [backendProduct.image],
+    rating: backendProduct.rating || 0,
+    reviews: backendProduct.numReviews || backendProduct.reviews || 0,
+    numReviews: backendProduct.numReviews || 0,
+    inStock: backendProduct.inStock,
+    countInStock: backendProduct.countInStock,
+    category: backendProduct.category,
+    brand: backendProduct.brand,
+    description: backendProduct.description,
+    features: backendProduct.features || [],
+    specifications: backendProduct.specifications || {},
+    tags: backendProduct.tags || [],
+    weight: backendProduct.weight || '',
+    dimensions: backendProduct.dimensions || '',
+    warranty: backendProduct.warranty || ''
+  };
+};
 
 /**
  * Helper function to handle API responses and errors
@@ -19,7 +49,7 @@ const handleResponse = async (response: Response) => {
     } catch (e) {
       // If we can't parse the JSON, just use the status
       console.error('API Error:', response.status, response.statusText);
-      throw new Error(`Error: ${response.status} ${response.statusText}`);
+      throw new Error(`Network Error: ${response.status} ${response.statusText}`);
     }
   }
   
@@ -53,8 +83,12 @@ export const authApi = {
    */
   login: async (email: string, password: string) => {
     try {
+      console.log('🔐 Attempting login for:', email);
+      console.log('🌐 API_BASE_URL:', API_BASE_URL);
+      
       // For development/demo mode, use mock data
       if (process.env.REACT_APP_USE_MOCK_DATA === 'true') {
+        console.log('📝 Using mock data for login');
         return new Promise<{ token: string; user: User }>((resolve) => {
           setTimeout(() => {
             resolve({ 
@@ -71,6 +105,8 @@ export const authApi = {
         });
       }
 
+      console.log('🚀 Making API request to:', `${API_BASE_URL}/users/login`);
+      
       // For production, use real API
       const response = await fetch(`${API_BASE_URL}/users/login`, {
         method: 'POST',
@@ -80,9 +116,37 @@ export const authApi = {
         body: JSON.stringify({ email, password }),
       });
 
-      return handleResponse(response);
+      console.log('📡 Login response status:', response.status);
+      console.log('📡 Login response ok:', response.ok);
+
+      const data = await handleResponse(response);
+      console.log('📦 Raw backend data:', data);
+      
+      // Transform backend response to frontend format
+      const transformedData = {
+        token: data.token,
+        user: {
+          id: data._id,
+          username: data.username,
+          email: data.email,
+          profilePicture: data.profilePicture || '/images/avatars/default.jpg',
+          createdAt: new Date().toISOString(),
+          isAdmin: data.isAdmin
+        }
+      };
+      
+      console.log('✅ Transformed login data:', transformedData);
+      return transformedData;
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('❌ Login error:', error);
+      
+      // Check if it's a network error (Failed to fetch)
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        console.error('🚫 Network Error - Unable to connect to server');
+        console.error('🔍 Check if backend server is running on:', API_BASE_URL);
+        throw new Error('Unable to connect to server. Please check if the backend is running.');
+      }
+      
       throw error;
     }
   },
@@ -145,7 +209,19 @@ export const authApi = {
         },
       });
 
-      return handleResponse(response);
+      const data = await handleResponse(response);
+      
+      // Transform backend response to frontend format
+      return {
+        id: data._id,
+        username: data.username,
+        email: data.email,
+        profilePicture: data.profilePicture || '/images/avatars/default.jpg',
+        createdAt: new Date().toISOString(),
+        isAdmin: data.isAdmin,
+        phoneNumber: data.phoneNumber,
+        defaultShippingAddress: data.defaultShippingAddress
+      };
     } catch (error) {
       console.error('Error fetching user data:', error);
       throw error;
@@ -391,7 +467,17 @@ export const productApi = {
       }
       
       const response = await fetch(`${API_BASE_URL}/products?${queryParams.toString()}`);
-      return handleResponse(response);
+      const data = await handleResponse(response);
+      
+      // Transform backend format to frontend format
+      const transformedProducts = data.products ? data.products.map(transformBackendProduct) : [];
+      
+      return {
+        products: transformedProducts,
+        total: data.totalProducts || 0,
+        page: data.page || 1,
+        totalPages: data.pages || 1
+      };
     } catch (error) {
       console.error('Error fetching products:', error);
       throw error;
@@ -742,19 +828,23 @@ export const cartApi = {
         });
       }
 
-      // For production, use real API
+      console.log(`API: Adding product ${productId} (quantity: ${quantity}) to cart`);
+
+      // For production, use real API - use numeric ID if available
+      const idToUse = typeof productId === 'number' ? productId : productId;
+
       const response = await fetch(`${API_BASE_URL}/cart/items`, {
         method: 'POST',
         headers: {
           ...getAuthHeader(),
           'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store',
-          'Pragma': 'no-cache'
         },
-        body: JSON.stringify({ productId, quantity }),
+        body: JSON.stringify({ productId: idToUse, quantity }),
       });
 
-      return handleResponse(response);
+      const data = await handleResponse(response);
+      console.log('API: Cart add response:', data);
+      return data;
     } catch (error) {
       console.error('Error adding to cart:', error);
       throw error;

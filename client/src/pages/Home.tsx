@@ -3,20 +3,45 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Shield, Truck, Clock } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import type { Product } from '../types/Product';
-import { mockProducts } from '../types/Product';
+import { useCart } from '../contexts/CartContext';
+import { productApi } from '../services/api';
 
 const Home: React.FC = () => {
-  const [featuredProducts, setFeaturedProducts] = useState<Product[]>(mockProducts.slice(0, 4));
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const { addToCart } = useCart();
 
   useEffect(() => {
-    setFeaturedProducts(mockProducts.slice(0, 4));
-    setLoading(false);
+    const loadFeaturedProducts = async () => {
+      try {
+        console.log('Loading featured products from API...');
+        const result = await productApi.getProducts();
+        console.log('API result:', result);
+        
+        // Take first 4 products as featured
+        const featured = result.products.slice(0, 4);
+        setFeaturedProducts(featured);
+      } catch (error) {
+        console.error('Error loading featured products:', error);
+        // If API fails, we could fallback to mock data, but let's show empty for now
+        setFeaturedProducts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadFeaturedProducts();
   }, []);
 
-  const handleAddToCart = (product: Product) => {
-    // TODO: Implement cart functionality
-    console.log('Adding to cart:', product);
+  const handleAddToCart = async (product: Product) => {
+    try {
+      console.log('Adding product to cart:', product);
+      await addToCart(product);
+      console.log(`Added ${product.name} to cart successfully`);
+    } catch (error) {
+      console.error('Failed to add product to cart:', error);
+      alert('Failed to add product to cart. Please try again.');
+    }
   };
 
   const features = [

@@ -15,6 +15,11 @@ import { AuthProvider } from './contexts/AuthContext';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Profile from './pages/Profile';
+import AdminDashboard from './pages/AdminDashboard';
+import AdminProducts from './pages/AdminProducts';
+import AdminProductForm from './pages/AdminProductForm';
+import AdminCategories from './pages/AdminCategories';
+import AdminInventory from './pages/AdminInventory';
 
 function App() {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -41,11 +46,22 @@ function App() {
                     <Route path="/" element={<Home />} />
                     <Route path="/products" element={<Products />} />
                     <Route path="/products/:id" element={<ProductDetail />} />
+                    <Route path="/product/:id" element={<ProductDetail />} />
                     <Route path="/cart" element={<Cart />} />
                     <Route path="/checkout" element={<Checkout />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/signup" element={<Signup />} />
                     <Route path="/profile" element={<Profile />} />
+                    
+                    {/* Admin Routes */}
+                    <Route path="/admin" element={<AdminDashboard />} />
+                    <Route path="/admin/products" element={<AdminProducts />} />
+                    <Route path="/admin/products/new" element={<AdminProductForm />} />
+                    <Route path="/admin/products/edit/:id" element={<AdminProductForm />} />
+                    <Route path="/admin/categories" element={<AdminCategories />} />
+                    <Route path="/admin/categories/new" element={<AdminCategories />} />
+                    <Route path="/admin/inventory" element={<AdminInventory />} />
+                    <Route path="/admin/inventory/low-stock" element={<AdminInventory />} />
                   </Routes>
                 </main>
                 <Footer />
