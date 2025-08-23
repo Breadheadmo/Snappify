@@ -20,7 +20,7 @@ interface ProductFormData {
 }
 
 const AdminProductForm: React.FC = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isAuthLoading } = useAuth();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEditMode = Boolean(id);
@@ -58,6 +58,10 @@ const AdminProductForm: React.FC = () => {
     }
   }, [isEditMode, id, isAuthenticated, user]);
 
+  // Show loading spinner while auth state is loading
+  if (isAuthLoading) {
+    return <div className="flex justify-center items-center h-screen"><span>Loading...</span></div>;
+  }
   // Redirect if not admin
   if (!isAuthenticated || !user?.isAdmin) {
     return <Navigate to="/login" replace />;
@@ -125,23 +129,43 @@ const AdminProductForm: React.FC = () => {
     e.preventDefault();
     setSubmitLoading(true);
 
+    // Validate required fields
+    const requiredFields = [
+      formData.name,
+      formData.brand,
+      formData.category,
+      formData.description,
+      formData.price,
+      formData.countInStock
+    ];
+    if (requiredFields.some(field => field === '' || field === undefined || field === null)) {
+      alert('Please fill in all required fields.');
+      setSubmitLoading(false);
+      return;
+    }
+
+    // Ensure images is a non-empty array of strings
+    const images = formData.images.filter(img => img.trim() !== '');
+    if (images.length === 0) {
+      images.push('https://via.placeholder.com/650x650');
+    }
+
+    // Clean up data before sending
+    const cleanedData = {
+      ...formData,
+      images: images,
+      features: formData.features.filter(f => f.trim() !== ''),
+      tags: formData.tags.filter(t => t.trim() !== ''),
+      price: Number(formData.price),
+      originalPrice: Number(formData.originalPrice),
+      countInStock: Number(formData.countInStock),
+    };
+
+    const url = isEditMode ? `/api/products/${id}` : '/api/products';
+    const method = isEditMode ? 'PUT' : 'POST';
+    const token = localStorage.getItem('token');
+
     try {
-      const token = localStorage.getItem('token');
-      
-      // Clean up the data before sending
-      const cleanedData = {
-        ...formData,
-        images: formData.images.filter(img => img.trim() !== ''),
-        features: formData.features.filter(feature => feature.trim() !== ''),
-        tags: formData.tags.filter(tag => tag.trim() !== ''),
-        price: Number(formData.price),
-        originalPrice: Number(formData.originalPrice),
-        countInStock: Number(formData.countInStock)
-      };
-
-      const url = isEditMode ? `/api/products/${id}` : '/api/products';
-      const method = isEditMode ? 'PUT' : 'POST';
-
       const response = await fetch(url, {
         method,
         headers: {

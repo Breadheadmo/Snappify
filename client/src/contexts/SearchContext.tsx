@@ -152,14 +152,10 @@ const searchReducer = (state: SearchState, action: SearchAction): SearchState =>
       return { ...state, sortBy: action.payload };
     
     case 'SEARCH_PRODUCTS': {
-      const filteredProducts = filterProductsByCriteria(state);
-      const sortedProducts = sortProductsByCriteria(filteredProducts, state.sortBy);
-      
+      // We'll handle fetching from backend in the SearchProvider
       return {
         ...state,
-        results: sortedProducts,
-        totalResults: sortedProducts.length,
-        isLoading: false
+        isLoading: true
       };
     }
     
@@ -178,23 +174,54 @@ const searchReducer = (state: SearchState, action: SearchAction): SearchState =>
 export const SearchProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(searchReducer, {
     ...initialState,
-    results: mockProducts,
-    totalResults: mockProducts.length
+    results: [],
+    totalResults: 0
   });
 
-  // Load categories and brands on mount
+  // Fetch products from backend whenever search/filter changes
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchProducts = async () => {
       try {
-        // Fetch categories and brands - using mock data for now
-        console.log('Brands:', mockBrands);
+        const filters: any = {
+          category: state.category !== 'all' ? state.category : undefined,
+          brand: state.brand !== 'all' ? state.brand : undefined,
+          search: state.query,
+          minPrice: state.priceRange[0],
+          maxPrice: state.priceRange[1],
+          sortBy: state.sortBy,
+        };
+        const result = await productApi.getProducts(filters);
+        dispatch({
+          type: 'SEARCH_PRODUCTS',
+        });
+        // Update results after fetch
+        dispatch({
+          type: '__UPDATE_RESULTS',
+          payload: {
+            results: result.products,
+            totalResults: result.total
+          }
+        } as any);
       } catch (error) {
-        console.error('Error fetching search filters:', error);
+        console.error('Error fetching products:', error);
       }
     };
-    
-    fetchData();
-  }, []);
+    fetchProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.query, state.category, state.brand, state.priceRange, state.sortBy]);
+
+  // Add a custom action to update results after fetch
+  function customReducer(state: SearchState, action: any): SearchState {
+    if (action.type === '__UPDATE_RESULTS') {
+      return {
+        ...state,
+        results: action.payload.results,
+        totalResults: action.payload.totalResults,
+        isLoading: false
+      };
+    }
+    return searchReducer(state, action);
+  }
 
   const setQuery = (query: string) => {
     dispatch({ type: 'SET_QUERY', payload: query });

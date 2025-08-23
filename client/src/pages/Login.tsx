@@ -84,8 +84,13 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      await login(formData.email, formData.password);
-      navigate('/'); // Redirect to home page after successful login
+      const loginData = await login(formData.email, formData.password);
+      // Redirect based on user role
+      if (loginData.user.isAdmin) {
+        navigate('/admin'); // Redirect admin users to admin dashboard
+      } else {
+        navigate('/'); // Redirect regular users to home page
+      }
     } catch (err) {
       setGeneralError(err instanceof Error ? err.message : 'Failed to login. Please check your credentials and try again.');
     } finally {

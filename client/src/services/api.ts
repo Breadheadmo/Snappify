@@ -2,8 +2,10 @@
 import { Product, CartItem, mockProducts, mockCategories, mockBrands } from '../types/Product';
 import { User } from '../types/User';
 
-// Base API URL - connects to our new Express backend
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+// Base API URL - use relative URL in development to leverage proxy, absolute URL in production
+const API_BASE_URL = process.env.NODE_ENV === 'production' 
+  ? process.env.REACT_APP_API_URL || 'http://localhost:5001/api'
+  : '/api'; // Use proxy in development
 console.log('API_BASE_URL:', API_BASE_URL); // Debug log
 
 /**

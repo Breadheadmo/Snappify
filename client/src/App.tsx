@@ -34,11 +34,11 @@ function App() {
   }, []);
 
   return (
-    <AuthProvider>
-      <CartProvider>
-        <WishlistProvider>
-          <SearchProvider>
-            <Router>
+    <Router>
+      <AuthProvider>
+        <CartProvider>
+          <WishlistProvider>
+            <SearchProvider>
               <div className={`min-h-screen flex flex-col ${isLoaded ? 'page-load' : 'opacity-0'}`}>
                 <Header />
                 <main className="flex-grow">
@@ -52,7 +52,6 @@ function App() {
                     <Route path="/login" element={<Login />} />
                     <Route path="/signup" element={<Signup />} />
                     <Route path="/profile" element={<Profile />} />
-                    
                     {/* Admin Routes */}
                     <Route path="/admin" element={<AdminDashboard />} />
                     <Route path="/admin/products" element={<AdminProducts />} />
@@ -66,11 +65,11 @@ function App() {
                 </main>
                 <Footer />
               </div>
-            </Router>
-          </SearchProvider>
-        </WishlistProvider>
-      </CartProvider>
-    </AuthProvider>
+            </SearchProvider>
+          </WishlistProvider>
+        </CartProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 
