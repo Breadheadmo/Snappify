@@ -14,6 +14,7 @@ dotenv.config();
 // Sample products data
 const products = [
   {
+    id: 1,
     name: 'Wireless Earbuds',
     price: 1299,
     description: 'Premium wireless earbuds with noise cancellation',
@@ -25,6 +26,7 @@ const products = [
     images: ['https://via.placeholder.com/650x650?text=Wireless+Earbuds+1']
   },
   {
+    id: 2,
     name: '65" 4K Smart TV',
     price: 11999,
     description: 'Experience stunning clarity with this 65-inch 4K smart TV',
@@ -36,6 +38,7 @@ const products = [
     images: ['https://via.placeholder.com/650x650?text=Smart+TV+1']
   },
   {
+    id: 3,
     name: 'Smartphone 5G',
     price: 9999,
     description: 'Cutting-edge smartphone with 5G connectivity',
@@ -77,9 +80,12 @@ mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopol
 
 async function importData() {
   try {
-    // Clear existing products
+    // Clear existing data
     await Product.deleteMany({});
     console.log('Existing products cleared');
+    
+    await User.deleteMany({});
+    console.log('Existing users cleared');
     
     // Create users
     const createdUsers = await User.insertMany(users);
