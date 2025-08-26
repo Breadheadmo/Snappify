@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, CreditCard, Truck, Shield } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
-import { mockProducts } from '../types/Product';
+
 
 const Cart: React.FC = () => {
   const { state, removeFromCart, updateQuantity, clearCart } = useCart();
@@ -246,35 +246,7 @@ const Cart: React.FC = () => {
         <div className="mt-16">
           <h2 className="text-2xl font-bold text-gray-900 mb-8">You might also like</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {mockProducts.slice(0, 4).map((product) => (
-              <div key={product.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="w-full h-48 object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = 'https://via.placeholder.com/300x200?text=Product';
-                  }}
-                />
-                <div className="p-4">
-                  <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
-                    <Link to={`/products/${product.id}`} className="hover:text-primary-600">
-                      {product.name}
-                    </Link>
-                  </h3>
-                  <div className="text-lg font-bold text-gray-900 mb-2">
-                    R{(product.price / 100).toFixed(2)}
-                  </div>
-                  <Link
-                    to={`/products/${product.id}`}
-                    className="block w-full text-center bg-primary-600 text-white py-2 px-4 rounded-lg hover:bg-primary-700 transition-colors"
-                  >
-                    View Product
-                  </Link>
-                </div>
-              </div>
-            ))}
+            {/* TODO: Replace with backend API products or recommended products */}
           </div>
         </div>
       </div>

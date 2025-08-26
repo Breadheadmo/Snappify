@@ -8,26 +8,25 @@ interface WishlistState {
 
 type WishlistAction =
   | { type: 'ADD_ITEM'; payload: Product }
-  | { type: 'REMOVE_ITEM'; payload: number }
+  | { type: 'REMOVE_ITEM'; payload: string | number }
   | { type: 'CLEAR_WISHLIST' }
   | { type: 'LOAD_WISHLIST'; payload: Product[] };
 
 const WishlistContext = createContext<{
   state: WishlistState;
   addToWishlist: (product: Product) => void;
-  removeFromWishlist: (productId: number) => void;
+  removeFromWishlist: (productId: string | number) => void;
   clearWishlist: () => void;
-  isInWishlist: (productId: number) => boolean;
+  isInWishlist: (productId: string | number) => boolean;
   toggleWishlist: (product: Product) => void;
 } | undefined>(undefined);
 
 const wishlistReducer = (state: WishlistState, action: WishlistAction): WishlistState => {
   switch (action.type) {
     case 'ADD_ITEM': {
-      if (state.items.some(item => item.id === action.payload.id)) {
+      if (state.items.some(item => String(item.id) === String(action.payload.id))) {
         return state; // Already in wishlist
       }
-      
       return {
         ...state,
         items: [...state.items, action.payload],
@@ -36,8 +35,7 @@ const wishlistReducer = (state: WishlistState, action: WishlistAction): Wishlist
     }
     
     case 'REMOVE_ITEM': {
-      const updatedItems = state.items.filter(item => item.id !== action.payload);
-      
+      const updatedItems = state.items.filter(item => String(item.id) !== String(action.payload));
       return {
         ...state,
         items: updatedItems,
@@ -96,7 +94,7 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
     dispatch({ type: 'ADD_ITEM', payload: product });
   };
 
-  const removeFromWishlist = (productId: number) => {
+  const removeFromWishlist = (productId: string | number) => {
     dispatch({ type: 'REMOVE_ITEM', payload: productId });
   };
 
@@ -104,8 +102,8 @@ export const WishlistProvider: React.FC<{ children: ReactNode }> = ({ children }
     dispatch({ type: 'CLEAR_WISHLIST' });
   };
 
-  const isInWishlist = (productId: number): boolean => {
-    return state.items.some(item => item.id === productId);
+  const isInWishlist = (productId: string | number): boolean => {
+    return state.items.some(item => String(item.id) === String(productId));
   };
 
   const toggleWishlist = (product: Product) => {

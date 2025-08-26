@@ -194,11 +194,9 @@ const Checkout: React.FC = () => {
   const handlePlaceOrder = async () => {
     setIsProcessing(true);
     setError('');
-    
     try {
-      // In a real app, you would send these details to the API
-      // Prepare order data (uncomment when connecting to a real API)
-      /*const shippingDetails: ShippingDetails = {
+      // Prepare order data
+      const shippingDetails = {
         fullName: shippingFields.fullName.value,
         addressLine1: shippingFields.addressLine1.value,
         addressLine2: shippingFields.addressLine2.value,
@@ -207,26 +205,18 @@ const Checkout: React.FC = () => {
         country: shippingFields.country.value,
         phoneNumber: shippingFields.phoneNumber.value
       };
-      
-      const paymentDetails: PaymentDetails = {
+      const paymentDetails = {
         cardNumber: paymentFields.cardNumber.value.replace(/\D/g, ''),
         cardholderName: paymentFields.cardholderName.value,
         expiryDate: paymentFields.expiryDate.value,
         cvv: paymentFields.cvv.value
-      };*/
-      
-      // In a real app, you would make an API call here
-      // For demo purposes, we'll simulate a successful order
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Generate a mock order ID
-      const mockOrderId = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-      setOrderId(mockOrderId);
-      
-      // Clear the cart
+      };
+      // Call backend checkout API
+      const { orderId: backendOrderId } = await import('../services/api').then(mod => mod.cartApi.checkout(shippingDetails, paymentDetails));
+      setOrderId(backendOrderId || `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`);
       clearCart();
-      
-      // Show confirmation
+      // Refresh products after order to update stock
+      await import('../contexts/SearchContext').then(mod => mod.useSearch().searchProducts());
       setCurrentStep('confirmation');
       setOrderComplete(true);
     } catch (err) {

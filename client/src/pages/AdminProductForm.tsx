@@ -287,37 +287,33 @@ const AdminProductForm: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Brand *
                 </label>
-                <input
-                  type="text"
-                  list="brands"
+                <select
                   value={formData.brand}
                   onChange={(e) => setFormData(prev => ({ ...prev, brand: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
-                />
-                <datalist id="brands">
+                >
+                  <option value="">Select Brand</option>
                   {brands.map(brand => (
-                    <option key={brand} value={brand} />
+                    <option key={brand} value={brand}>{brand}</option>
                   ))}
-                </datalist>
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Category *
                 </label>
-                <input
-                  type="text"
-                  list="categories"
+                <select
                   value={formData.category}
                   onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
-                />
-                <datalist id="categories">
+                >
+                  <option value="">Select Category</option>
                   {categories.map(category => (
-                    <option key={category} value={category} />
+                    <option key={category} value={category}>{category}</option>
                   ))}
-                </datalist>
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">

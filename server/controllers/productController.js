@@ -106,6 +106,20 @@ const createProduct = asyncHandler(async (req, res) => {
     originalPrice,
   } = req.body;
 
+  // Backend validation
+  if (!category || typeof category !== 'string' || !category.trim()) {
+    res.status(400);
+    throw new Error('Category is required');
+  }
+  if (!brand || typeof brand !== 'string' || !brand.trim()) {
+    res.status(400);
+    throw new Error('Brand is required');
+  }
+  if (price === undefined || price === null || isNaN(price) || Number(price) < 0) {
+    res.status(400);
+    throw new Error('Valid price is required');
+  }
+
   const product = new Product({
     name,
     price,
@@ -154,6 +168,20 @@ const updateProduct = asyncHandler(async (req, res) => {
   } = req.body;
 
   const product = await Product.findById(req.params.id);
+
+  // Backend validation
+  if (category !== undefined && (typeof category !== 'string' || !category.trim())) {
+    res.status(400);
+    throw new Error('Category is required');
+  }
+  if (brand !== undefined && (typeof brand !== 'string' || !brand.trim())) {
+    res.status(400);
+    throw new Error('Brand is required');
+  }
+  if (price !== undefined && (isNaN(price) || Number(price) < 0)) {
+    res.status(400);
+    throw new Error('Valid price is required');
+  }
 
   if (product) {
     product.name = name || product.name;

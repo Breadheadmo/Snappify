@@ -1,16 +1,43 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, X, Star } from 'lucide-react';
 import { useSearch } from '../contexts/SearchContext';
-import { mockCategories, mockBrands } from '../contexts/SearchContext';
 
 const SearchFilters: React.FC = () => {
   const { state, setQuery, setCategory, setBrand, setPriceRange, setRating, setInStock, setSortBy, searchProducts, clearFilters } = useSearch();
   const [isOpen, setIsOpen] = useState(false);
   const [localQuery, setLocalQuery] = useState(state.query);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [brands, setBrands] = useState<string[]>([]);
+  const [maxPrice, setMaxPrice] = useState(20000);
 
   useEffect(() => {
     setLocalQuery(state.query);
   }, [state.query]);
+
+  useEffect(() => {
+    // Fetch categories and brands from backend
+    const fetchFilters = async () => {
+      try {
+        const [catRes, brandRes] = await Promise.all([
+          await import('../services/api').then(mod => mod.productApi.getCategories()),
+          await import('../services/api').then(mod => mod.productApi.getBrands())
+        ]);
+        setCategories(catRes);
+        setBrands(brandRes);
+      } catch (err) {
+        setCategories([]);
+        setBrands([]);
+      }
+    };
+    fetchFilters();
+  }, []);
+
+  useEffect(() => {
+    // Dynamically set max price based on products in results
+    if (state.results.length > 0) {
+      setMaxPrice(Math.max(...state.results.map(p => p.price)));
+    }
+  }, [state.results]);
 
   const handleSearch = () => {
     setQuery(localQuery);
@@ -27,8 +54,6 @@ const SearchFilters: React.FC = () => {
     clearFilters();
     setLocalQuery('');
   };
-
-  const maxPrice = Math.max(...mockCategories.map(() => 20000)); // This should be dynamic based on actual products
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
@@ -164,7 +189,7 @@ const SearchFilters: React.FC = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
                 <option value="all">All Categories</option>
-                {mockCategories.map((category) => (
+                {categories.map((category) => (
                   <option key={category} value={category}>
                     {category}
                   </option>
@@ -181,7 +206,7 @@ const SearchFilters: React.FC = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
                 <option value="all">All Brands</option>
-                {mockBrands.map((brand) => (
+                {brands.map((brand) => (
                   <option key={brand} value={brand}>
                     {brand}
                   </option>

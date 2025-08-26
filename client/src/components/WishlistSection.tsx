@@ -8,8 +8,8 @@ const WishlistSection: React.FC = () => {
   const { state: wishlistState, removeFromWishlist } = useWishlist();
   const { addToCart } = useCart();
 
-  const handleAddToCart = (productId: number) => {
-    const product = wishlistState.items.find(item => item.id === productId);
+  const handleAddToCart = (productId: string | number) => {
+    const product = wishlistState.items.find(item => String(item.id) === String(productId));
     if (product) {
       addToCart(product);
     }
@@ -21,8 +21,8 @@ const WishlistSection: React.FC = () => {
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {wishlistState.items.map(product => (
-              <div 
-                key={product.id} 
+                <div 
+                  key={product.id} 
                 className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow relative"
               >
                 <div className="absolute top-2 right-2 flex space-x-2">

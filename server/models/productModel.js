@@ -44,16 +44,18 @@ const productSchema = mongoose.Schema(
     },
     brand: {
       type: String,
-      required: true,
+      required: [true, 'Brand is required'],
+      trim: true,
     },
     category: {
       type: String,
-      required: true,
+      required: [true, 'Category is required'],
+      trim: true,
     },
     price: {
       type: Number,
-      required: true,
-      default: 0,
+      required: [true, 'Price is required'],
+      min: [0, 'Price must be positive'],
     },
     originalPrice: {
       type: Number,

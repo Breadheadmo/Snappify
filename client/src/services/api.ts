@@ -1,5 +1,5 @@
 // API services for Snappy e-commerce application
-import { Product, CartItem, mockProducts, mockCategories, mockBrands } from '../types/Product';
+import { Product, CartItem } from '../types/Product';
 import { User } from '../types/User';
 
 // Base API URL - use relative URL in development to leverage proxy, absolute URL in production
@@ -11,18 +11,19 @@ console.log('API_BASE_URL:', API_BASE_URL); // Debug log
 /**
  * Helper function to transform backend product format to frontend format
  */
-const transformBackendProduct = (backendProduct: any): Product => {
+export const transformBackendProduct = (backendProduct: any): Product => {
   return {
-    id: backendProduct.id || parseInt(backendProduct._id.slice(-6), 16), // Use numeric ID or generate from ObjectId
+    id: backendProduct.id || backendProduct._id,
     _id: backendProduct._id,
     name: backendProduct.name,
     price: backendProduct.price,
     originalPrice: backendProduct.originalPrice,
+    discount: backendProduct.discount,
     image: Array.isArray(backendProduct.images) ? backendProduct.images[0] : backendProduct.image,
     images: backendProduct.images || [backendProduct.image],
     rating: backendProduct.rating || 0,
-    reviews: backendProduct.numReviews || backendProduct.reviews || 0,
-    numReviews: backendProduct.numReviews || 0,
+    reviews: backendProduct.reviews || backendProduct.numReviews || 0,
+    numReviews: backendProduct.numReviews,
     inStock: backendProduct.inStock,
     countInStock: backendProduct.countInStock,
     category: backendProduct.category,
@@ -33,7 +34,9 @@ const transformBackendProduct = (backendProduct: any): Product => {
     tags: backendProduct.tags || [],
     weight: backendProduct.weight || '',
     dimensions: backendProduct.dimensions || '',
-    warranty: backendProduct.warranty || ''
+    warranty: backendProduct.warranty || '',
+    returnPolicy: backendProduct.returnPolicy,
+    shippingInfo: backendProduct.shippingInfo
   };
 };
 
@@ -382,80 +385,6 @@ export const productApi = {
    */
   getProducts: async (filters?: ProductFilters) => {
     try {
-      // For development/demo mode, use mock data
-      if (process.env.REACT_APP_USE_MOCK_DATA === 'true') {
-        return new Promise<{
-          products: Product[];
-          total: number;
-          page: number;
-          totalPages: number;
-        }>((resolve) => {
-          setTimeout(() => {
-            // Apply filters to mock products
-            let filteredProducts = [...mockProducts];
-            
-            if (filters?.category && filters.category !== 'all') {
-              filteredProducts = filteredProducts.filter(p => p.category === filters.category);
-            }
-            
-            if (filters?.brand && filters.brand !== 'all') {
-              filteredProducts = filteredProducts.filter(p => p.brand === filters.brand);
-            }
-            
-            if (filters?.search) {
-              const searchTerm = filters.search.toLowerCase();
-              filteredProducts = filteredProducts.filter(p => 
-                p.name.toLowerCase().includes(searchTerm) || 
-                p.description.toLowerCase().includes(searchTerm) ||
-                p.brand.toLowerCase().includes(searchTerm) ||
-                p.category.toLowerCase().includes(searchTerm) ||
-                p.tags.some(tag => tag.toLowerCase().includes(searchTerm))
-              );
-            }
-            
-            if (filters?.minPrice !== undefined) {
-              filteredProducts = filteredProducts.filter(p => p.price >= filters.minPrice!);
-            }
-            
-            if (filters?.maxPrice !== undefined) {
-              filteredProducts = filteredProducts.filter(p => p.price <= filters.maxPrice!);
-            }
-            
-            // Apply sorting
-            if (filters?.sortBy) {
-              switch(filters.sortBy) {
-                case 'price-low':
-                  filteredProducts.sort((a, b) => a.price - b.price);
-                  break;
-                case 'price-high':
-                  filteredProducts.sort((a, b) => b.price - a.price);
-                  break;
-                case 'rating':
-                  filteredProducts.sort((a, b) => b.rating - a.rating);
-                  break;
-                case 'newest':
-                  // In a real app, you'd sort by date added
-                  filteredProducts.sort((a, b) => b.id - a.id);
-                  break;
-              }
-            }
-            
-            // Apply pagination
-            const page = filters?.page || 1;
-            const limit = filters?.limit || 10;
-            const startIndex = (page - 1) * limit;
-            const endIndex = startIndex + limit;
-            const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
-            
-            resolve({
-              products: paginatedProducts,
-              total: filteredProducts.length,
-              page,
-              totalPages: Math.ceil(filteredProducts.length / limit)
-            });
-          }, 800);
-        });
-      }
 
       // For production, use real API
       const queryParams = new URLSearchParams();
@@ -489,21 +418,8 @@ export const productApi = {
   /**
    * Get a product by ID
    */
-  getProductById: async (id: number) => {
+  getProductById: async (id: string) => {
     try {
-      // For development/demo mode, use mock data
-      if (process.env.REACT_APP_USE_MOCK_DATA === 'true') {
-        return new Promise<Product>((resolve, reject) => {
-          setTimeout(() => {
-            const product = mockProducts.find(p => p.id === id);
-            if (product) {
-              resolve(product);
-            } else {
-              reject(new Error('Product not found'));
-            }
-          }, 500);
-        });
-      }
 
       // For production, use real API
       const response = await fetch(`${API_BASE_URL}/products/${id}`);
@@ -519,16 +435,6 @@ export const productApi = {
    */
   getFeaturedProducts: async () => {
     try {
-      // For development/demo mode, use mock data
-      if (process.env.REACT_APP_USE_MOCK_DATA === 'true') {
-        return new Promise<Product[]>((resolve) => {
-          setTimeout(() => {
-            // Return 4 random products as "featured"
-            const shuffled = [...mockProducts].sort(() => 0.5 - Math.random());
-            resolve(shuffled.slice(0, 4));
-          }, 500);
-        });
-      }
 
       // For production, use real API
       const response = await fetch(`${API_BASE_URL}/products/featured`);
@@ -544,24 +450,6 @@ export const productApi = {
    */
   getRelatedProducts: async (productId: number) => {
     try {
-      // For development/demo mode, use mock data
-      if (process.env.REACT_APP_USE_MOCK_DATA === 'true') {
-        return new Promise<Product[]>((resolve) => {
-          setTimeout(() => {
-            const product = mockProducts.find(p => p.id === productId);
-            
-            if (product && product.relatedProducts) {
-              const related = mockProducts.filter(p => product.relatedProducts?.includes(p.id));
-              resolve(related);
-            } else {
-              // If no related products defined, return products in same category
-              const category = product ? product.category : '';
-              const sameCategory = mockProducts.filter(p => p.category === category && p.id !== productId);
-              resolve(sameCategory.slice(0, 4));
-            }
-          }, 500);
-        });
-      }
 
       // For production, use real API
       const response = await fetch(`${API_BASE_URL}/products/${productId}/related`);
@@ -577,14 +465,6 @@ export const productApi = {
    */
   getCategories: async () => {
     try {
-      // For development/demo mode, use mock data
-      if (process.env.REACT_APP_USE_MOCK_DATA === 'true') {
-        return new Promise<string[]>((resolve) => {
-          setTimeout(() => {
-            resolve(mockCategories);
-          }, 500);
-        });
-      }
 
       // For production, use real API
       const response = await fetch(`${API_BASE_URL}/products/categories`);
@@ -600,14 +480,6 @@ export const productApi = {
    */
   getBrands: async () => {
     try {
-      // For development/demo mode, use mock data
-      if (process.env.REACT_APP_USE_MOCK_DATA === 'true') {
-        return new Promise<string[]>((resolve) => {
-          setTimeout(() => {
-            resolve(mockBrands);
-          }, 500);
-        });
-      }
 
       // For production, use real API
       const response = await fetch(`${API_BASE_URL}/products/brands`);
@@ -623,22 +495,6 @@ export const productApi = {
    */
   searchProducts: async (query: string) => {
     try {
-      // For development/demo mode, use mock data
-      if (process.env.REACT_APP_USE_MOCK_DATA === 'true') {
-        return new Promise<Product[]>((resolve) => {
-          setTimeout(() => {
-            const searchTerm = query.toLowerCase();
-            const results = mockProducts.filter(p => 
-              p.name.toLowerCase().includes(searchTerm) || 
-              p.description.toLowerCase().includes(searchTerm) ||
-              p.brand.toLowerCase().includes(searchTerm) ||
-              p.category.toLowerCase().includes(searchTerm) ||
-              p.tags.some(tag => tag.toLowerCase().includes(searchTerm))
-            );
-            resolve(results);
-          }, 800);
-        });
-      }
 
       // For production, use real API
       const response = await fetch(`${API_BASE_URL}/products/search?q=${encodeURIComponent(query)}`);
@@ -663,9 +519,8 @@ export const wishlistApi = {
       if (process.env.REACT_APP_USE_MOCK_DATA === 'true') {
         return new Promise<Product[]>((resolve) => {
           setTimeout(() => {
-            // Return a few random products as the wishlist
-            const wishlistProducts = [mockProducts[0], mockProducts[2], mockProducts[5]];
-            resolve(wishlistProducts);
+            // Return an empty wishlist for demo mode
+            resolve([]);
           }, 500);
         });
       }
@@ -791,15 +646,8 @@ export const cartApi = {
       if (process.env.REACT_APP_USE_MOCK_DATA === 'true') {
         return new Promise<CartData>((resolve) => {
           setTimeout(() => {
-            // Generate a mock cart with 2 items
-            const items: CartItem[] = [
-              { product: mockProducts[0], quantity: 2 },
-              { product: mockProducts[3], quantity: 1 }
-            ];
-            
-            const total = items.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
-            
-            resolve({ items, total });
+            // Return an empty cart for demo mode
+            resolve({ items: [], total: 0 });
           }, 500);
         });
       }
@@ -986,27 +834,8 @@ export const orderApi = {
       if (process.env.REACT_APP_USE_MOCK_DATA === 'true') {
         return new Promise<any[]>((resolve) => {
           setTimeout(() => {
-            resolve([
-              {
-                id: 'order-1',
-                date: new Date(Date.now() - 86400000 * 3).toISOString(), // 3 days ago
-                status: 'delivered',
-                total: 3998,
-                items: [
-                  { product: mockProducts[0], quantity: 1 },
-                  { product: mockProducts[2], quantity: 2 }
-                ]
-              },
-              {
-                id: 'order-2',
-                date: new Date().toISOString(),
-                status: 'processing',
-                total: 5999,
-                items: [
-                  { product: mockProducts[3], quantity: 1 }
-                ]
-              }
-            ]);
+            // Return an empty orders array for demo mode
+            resolve([]);
           }, 800);
         });
       }
@@ -1036,48 +865,8 @@ export const orderApi = {
       if (process.env.REACT_APP_USE_MOCK_DATA === 'true') {
         return new Promise<any>((resolve, reject) => {
           setTimeout(() => {
-            if (orderId === 'order-1') {
-              resolve({
-                id: 'order-1',
-                date: new Date(Date.now() - 86400000 * 3).toISOString(),
-                status: 'delivered',
-                total: 3998,
-                items: [
-                  { product: mockProducts[0], quantity: 1 },
-                  { product: mockProducts[2], quantity: 2 }
-                ],
-                shippingAddress: {
-                  street: '123 Main St',
-                  city: 'Cape Town',
-                  state: 'Western Cape',
-                  zipCode: '8001',
-                  country: 'South Africa'
-                },
-                paymentMethod: 'Credit Card (ending in 4242)',
-                trackingNumber: 'TRACK-12345-ZA'
-              });
-            } else if (orderId === 'order-2') {
-              resolve({
-                id: 'order-2',
-                date: new Date().toISOString(),
-                status: 'processing',
-                total: 5999,
-                items: [
-                  { product: mockProducts[3], quantity: 1 }
-                ],
-                shippingAddress: {
-                  street: '123 Main St',
-                  city: 'Cape Town',
-                  state: 'Western Cape',
-                  zipCode: '8001',
-                  country: 'South Africa'
-                },
-                paymentMethod: 'Credit Card (ending in 4242)',
-                trackingNumber: null
-              });
-            } else {
-              reject(new Error('Order not found'));
-            }
+            // Return null for demo mode
+            reject(new Error('Order not found'));
           }, 500);
         });
       }

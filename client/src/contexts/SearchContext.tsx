@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useReducer, ReactNode, useEffect } from 'react';
 import type { Product } from '../types/Product';
-import { mockProducts, mockCategories, mockBrands } from '../types/Product';
+// Removed mockProducts, mockCategories, mockBrands import
 import { productApi } from '../services/api';
 
 interface SearchState {
@@ -56,7 +56,14 @@ const initialState: SearchState = {
 
 // Helper function to filter products based on search criteria
 const filterProductsByCriteria = (filters: Omit<SearchState, 'results' | 'totalResults' | 'isLoading'>): Product[] => {
-  let filtered = [...mockProducts];
+  // Use the results from the context state for filtering
+  // If this is inside getFilteredProducts, use 'state.results'.
+  // If inside filterProductsByCriteria, use 'filters.results' or pass results as argument.
+  // For getFilteredProducts, use:
+  // Accept products as an argument for filtering
+  // Usage: filterProductsByCriteria(filters, products)
+  // Remove reference to 'state.results' here
+  let filtered: Product[] = [];
 
   // Filter by query (search in name, description, and tags)
   if (filters.query) {
@@ -64,7 +71,7 @@ const filterProductsByCriteria = (filters: Omit<SearchState, 'results' | 'totalR
     filtered = filtered.filter(product =>
       product.name.toLowerCase().includes(query) ||
       product.description.toLowerCase().includes(query) ||
-      product.tags.some(tag => tag.toLowerCase().includes(query)) ||
+  product.tags.some((tag: string) => tag.toLowerCase().includes(query)) ||
       product.brand.toLowerCase().includes(query)
     );
   }
@@ -115,7 +122,7 @@ const sortProductsByCriteria = (products: Product[], sortBy: string): Product[] 
       return sorted.sort((a, b) => b.reviews - a.reviews);
     
     case 'newest':
-      return sorted.sort((a, b) => b.id - a.id);
+  return sorted.sort((a, b) => Number(b.id) - Number(a.id));
     
     case 'name-asc':
       return sorted.sort((a, b) => a.name.localeCompare(b.name));
@@ -162,8 +169,9 @@ const searchReducer = (state: SearchState, action: SearchAction): SearchState =>
     case 'CLEAR_FILTERS':
       return {
         ...initialState,
-        results: mockProducts,
-        totalResults: mockProducts.length
+        results: [],
+        totalResults: 0,
+        isLoading: true
       };
     
     default:
@@ -260,7 +268,47 @@ export const SearchProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
 
   const getFilteredProducts = (): Product[] => {
-    return filterProductsByCriteria(state);
+    // Use backend-fetched products for filtering, not mockProducts
+  // Use the local state variable from the SearchProvider context
+  let filtered = [...state.results];
+
+    // Filter by query (search in name, description, and tags)
+    if (state.query) {
+      const query = state.query.toLowerCase();
+      filtered = filtered.filter(product =>
+        product.name.toLowerCase().includes(query) ||
+        product.description.toLowerCase().includes(query) ||
+        (product.tags && product.tags.some(tag => tag.toLowerCase().includes(query))) ||
+        product.brand.toLowerCase().includes(query)
+      );
+    }
+
+    // Filter by category
+    if (state.category !== 'all') {
+      filtered = filtered.filter(product => product.category === state.category);
+    }
+
+    // Filter by brand
+    if (state.brand !== 'all') {
+      filtered = filtered.filter(product => product.brand === state.brand);
+    }
+
+    // Filter by price range
+    filtered = filtered.filter(product => 
+      product.price >= state.priceRange[0] && product.price <= state.priceRange[1]
+    );
+
+    // Filter by rating
+    if (state.rating > 0) {
+      filtered = filtered.filter(product => product.rating >= state.rating);
+    }
+
+    // Filter by stock status
+    if (state.inStock) {
+      filtered = filtered.filter(product => product.inStock);
+    }
+
+    return filtered;
   };
 
   const value = {
@@ -292,4 +340,3 @@ export const useSearch = () => {
   return context;
 };
 
-export { mockCategories, mockBrands };
