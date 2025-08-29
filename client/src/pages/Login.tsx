@@ -246,6 +246,12 @@ export default function Login() {
                 Sign up now
               </Link>
             </p>
+            <div className="mt-4">
+              <Link to="/request-reset" className="text-blue-500 hover:underline">Forgot password?</Link>
+            </div>
+            <div className="mt-2">
+              <Link to="/request-email-verification" className="text-blue-500 hover:underline">Verify your email</Link>
+            </div>
           </div>
         </form>
       </div>

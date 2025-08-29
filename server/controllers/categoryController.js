@@ -60,7 +60,17 @@ const createCategory = asyncHandler(async (req, res) => {
     sortOrder,
     seoTitle,
     seoDescription,
+    slug,
   } = req.body;
+
+  // Always auto-generate slug from name if not provided
+  let categorySlug = slug;
+  if (!categorySlug && name) {
+    categorySlug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  }
+  if (!categorySlug) {
+    return res.status(400).json({ message: 'Category name is required to generate slug.' });
+  }
 
   // Check if category already exists
   const categoryExists = await Category.findOne({ name: name.trim() });
@@ -72,6 +82,7 @@ const createCategory = asyncHandler(async (req, res) => {
 
   const category = new Category({
     name: name.trim(),
+    slug: categorySlug,
     description,
     image,
     parent: parent || null,
@@ -237,3 +248,4 @@ module.exports = {
   getCategoryTree,
   updateCategoryCounts,
 };
+    createCategory

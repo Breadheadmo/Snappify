@@ -26,7 +26,7 @@ const AdminProducts: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<{_id: string, name: string}[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null);
@@ -78,10 +78,16 @@ const AdminProducts: React.FC = () => {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch('/api/products/categories');
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/categories/admin/all', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       if (response.ok) {
         const categoriesData = await response.json();
-        setCategories(categoriesData);
+        setCategories(categoriesData.map((cat: any) => ({ _id: cat._id, name: cat.name })));
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -195,8 +201,8 @@ const AdminProducts: React.FC = () => {
               >
                 <option value="all">All Categories</option>
                 {categories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
+                  <option key={category._id} value={category.name}>
+                    {category.name}
                   </option>
                 ))}
               </select>

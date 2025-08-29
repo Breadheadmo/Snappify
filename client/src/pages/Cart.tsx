@@ -7,6 +7,7 @@ import { useCart } from '../contexts/CartContext';
 const Cart: React.FC = () => {
   const { state, removeFromCart, updateQuantity, clearCart } = useCart();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const navigate = require('react-router-dom').useNavigate();
 
   const handleQuantityChange = async (productId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
@@ -24,7 +25,7 @@ const Cart: React.FC = () => {
     setIsCheckingOut(true);
     // Simulate loading before redirecting
     setTimeout(() => {
-      window.location.href = '/checkout';
+      navigate('/checkout');
     }, 1000);
   };
 

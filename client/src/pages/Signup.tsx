@@ -116,6 +116,12 @@ export default function Signup() {
             <Link to="/login" className="font-medium text-primary-600 hover:text-primary-500">
               sign in to your account
             </Link>
+            <div className="mt-4">
+              <Link to="/request-reset" className="text-blue-500 hover:underline">Forgot password?</Link>
+            </div>
+            <div className="mt-2">
+              <Link to="/request-email-verification" className="text-blue-500 hover:underline">Verify your email</Link>
+            </div>
           </p>
         </div>
 

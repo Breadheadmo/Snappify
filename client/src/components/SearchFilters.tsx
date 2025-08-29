@@ -6,7 +6,7 @@ const SearchFilters: React.FC = () => {
   const { state, setQuery, setCategory, setBrand, setPriceRange, setRating, setInStock, setSortBy, searchProducts, clearFilters } = useSearch();
   const [isOpen, setIsOpen] = useState(false);
   const [localQuery, setLocalQuery] = useState(state.query);
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<{_id: string, name: string}[]>([]);
   const [brands, setBrands] = useState<string[]>([]);
   const [maxPrice, setMaxPrice] = useState(20000);
 
@@ -19,10 +19,10 @@ const SearchFilters: React.FC = () => {
     const fetchFilters = async () => {
       try {
         const [catRes, brandRes] = await Promise.all([
-          await import('../services/api').then(mod => mod.productApi.getCategories()),
+          fetch('/api/categories').then(res => res.json()),
           await import('../services/api').then(mod => mod.productApi.getBrands())
         ]);
-        setCategories(catRes);
+        setCategories(catRes.map((cat: any) => ({ _id: cat._id, name: cat.name })));
         setBrands(brandRes);
       } catch (err) {
         setCategories([]);
@@ -190,8 +190,8 @@ const SearchFilters: React.FC = () => {
               >
                 <option value="all">All Categories</option>
                 {categories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
+                  <option key={category._id} value={category.name}>
+                    {category.name}
                   </option>
                 ))}
               </select>

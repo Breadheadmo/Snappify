@@ -42,7 +42,7 @@ const AdminProductForm: React.FC = () => {
     warranty: ''
   });
 
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<{_id: string, name: string}[]>([]);
   const [brands, setBrands] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
@@ -69,14 +69,20 @@ const AdminProductForm: React.FC = () => {
 
   const fetchDropdownData = async () => {
     try {
+      const token = localStorage.getItem('token');
       const [categoriesRes, brandsRes] = await Promise.all([
-        fetch('/api/products/categories'),
+        fetch('/api/categories/admin/all', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }),
         fetch('/api/products/brands')
       ]);
 
       if (categoriesRes.ok) {
         const categoriesData = await categoriesRes.json();
-        setCategories(categoriesData);
+        setCategories(categoriesData.map((cat: any) => ({ _id: cat._id, name: cat.name })));
       }
 
       if (brandsRes.ok) {
@@ -311,7 +317,7 @@ const AdminProductForm: React.FC = () => {
                 >
                   <option value="">Select Category</option>
                   {categories.map(category => (
-                    <option key={category} value={category}>{category}</option>
+                    <option key={category._id} value={category.name}>{category.name}</option>
                   ))}
                 </select>
               </div>

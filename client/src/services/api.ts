@@ -789,7 +789,16 @@ export const cartApi = {
   /**
    * Checkout the cart
    */
-  checkout: async (shippingDetails: any, paymentDetails: any) => {
+  checkout: async (
+    orderItems: Array<{ product: string; name: string; quantity: number; image: string; price: number }>,
+    shippingAddress: any,
+    paymentMethod: string,
+    shippingMethod: { name: string; price: number; description?: string },
+    taxPrice: number,
+    shippingPrice: number,
+    subtotal: number,
+    totalPrice: number
+  ) => {
     try {
       // For development/demo mode, use mock data
       if (process.env.REACT_APP_USE_MOCK_DATA === 'true') {
@@ -804,13 +813,22 @@ export const cartApi = {
       }
 
       // For production, use real API
-      const response = await fetch(`${API_BASE_URL}/orders/checkout`, {
+      const response = await fetch(`${API_BASE_URL}/orders`, {
         method: 'POST',
         headers: {
           ...getAuthHeader(),
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ shippingDetails, paymentDetails }),
+        body: JSON.stringify({
+          orderItems,
+          shippingAddress,
+          paymentMethod,
+          shippingMethod,
+          taxPrice,
+          shippingPrice,
+          subtotal,
+          totalPrice
+        }),
       });
 
       return handleResponse(response);
@@ -972,7 +990,7 @@ export const reviewApi = {
   /**
    * Add a review for a product
    */
-  addReview: async (productId: number, rating: number, comment: string) => {
+  addReview: async (productId: string, rating: number, comment: string) => {
     try {
       // For development/demo mode, use mock data
       if (process.env.REACT_APP_USE_MOCK_DATA === 'true') {

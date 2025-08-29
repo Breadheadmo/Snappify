@@ -40,10 +40,7 @@ const Header: React.FC = () => {
           {/* Logo */}
           <div className="flex-shrink-0">
             <Link to="/" className="flex items-center">
-              <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center mr-2">
-                <span className="text-white font-bold text-lg">T</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900">TechStore</span>
+              <img src={require('../assets/images/Logo1.png')} alt="Logo" className="w-8 h-8 mr-2 rounded-lg object-contain" />
             </Link>
           </div>
 

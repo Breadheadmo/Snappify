@@ -43,6 +43,11 @@ const userSchema = mongoose.Schema(
         ref: 'Product',
       },
     ],
+  // Add fields for password reset and email verification
+  resetToken: { type: String },
+  resetTokenExpires: { type: Date },
+  emailVerificationToken: { type: String },
+  emailVerified: { type: Boolean, default: false },
   },
   {
     timestamps: true,

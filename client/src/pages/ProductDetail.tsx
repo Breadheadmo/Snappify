@@ -1,16 +1,58 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import { useParams, Link } from 'react-router-dom';
-import { productApi } from '../services/api';
+import { productApi, reviewApi } from '../services/api';
 import { transformBackendProduct } from '../services/api';
 import { Star, ShoppingCart, ArrowLeft } from 'lucide-react';
 import type { Product } from '../types/Product';
 
+interface Review {
+  id: string;
+  userName: string;
+  rating: number;
+  comment: string;
+  date: string;
+}
+
 const ProductDetail: React.FC = () => {
+  const { user } = useAuth();
   const { id } = useParams();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [quantity, setQuantity] = useState<number>(1);
+  const [userRating, setUserRating] = useState<number | null>(null);
+  const [ratingSubmitting, setRatingSubmitting] = useState(false);
+  const [ratingError, setRatingError] = useState<string | null>(null);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const handleStarClick = async (rating: number) => {
+    if (!product || ratingSubmitting) return;
+    if (!user) {
+      setRatingError('You must be logged in to rate.');
+      return;
+    }
+    setRatingSubmitting(true);
+    setRatingError(null);
+    try {
+      // Use product._id as string for MongoDB ObjectId
+      const productId = product._id || product.id;
+      if (!productId || typeof productId !== 'string') throw new Error('Invalid product ID');
+      await reviewApi.addReview(productId, rating, "");
+      setUserRating(rating);
+      // Optionally, refetch product to update average rating
+      // const updated = await productApi.getProductById(productId);
+      // setProduct(updated);
+    } catch (err: any) {
+      if (err && err.message) {
+        setRatingError(err.message);
+      } else {
+        setRatingError("Failed to submit rating. Please try again.");
+      }
+    } finally {
+      setRatingSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -20,9 +62,7 @@ const ProductDetail: React.FC = () => {
         return;
       }
       try {
-        // Try to fetch with number, fallback to string
-  let data = await productApi.getProductById(String(id));
-        // If backend returns raw object, transform it
+        let data = await productApi.getProductById(String(id));
         if (data && !data.id && data._id) {
           data = transformBackendProduct(data);
         }
@@ -34,6 +74,25 @@ const ProductDetail: React.FC = () => {
       }
     };
     fetchProduct();
+  }, [id]);
+
+  useEffect(() => {
+    const fetchReviews = async () => {
+      if (!id) return;
+      setReviewsLoading(true);
+      try {
+  // Ensure id is a number for reviewApi
+  const productId = Number(id);
+  if (isNaN(productId)) throw new Error('Invalid product ID');
+  const data = await reviewApi.getProductReviews(productId);
+        setReviews(data);
+      } catch (err) {
+        setReviews([]);
+      } finally {
+        setReviewsLoading(false);
+      }
+    };
+    fetchReviews();
   }, [id]);
 
   const handleAddToCart = () => {
@@ -99,9 +158,26 @@ const ProductDetail: React.FC = () => {
             </div>
             <div className="flex items-center mb-2">
               {[...Array(5)].map((_, i) => (
-                <Star key={i} className={`h-5 w-5 ${i < Math.floor(product.rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => handleStarClick(i + 1)}
+                  disabled={ratingSubmitting || !user}
+                  className="focus:outline-none"
+                  aria-label={`Rate ${i + 1} stars`}
+                >
+                  <Star
+                    className={`h-5 w-5 transition-colors duration-150 ${
+                      (userRating !== null ? i < userRating : i < Math.floor(product.rating))
+                        ? 'text-yellow-400 fill-current'
+                        : 'text-gray-300'
+                    }`}
+                  />
+                </button>
               ))}
               <span className="ml-2 text-gray-600">({product.numReviews || product.reviews} reviews)</span>
+              {ratingError && <span className="ml-4 text-red-500 text-sm">{ratingError}</span>}
+              {userRating && <span className="ml-4 text-green-600 text-sm">Thank you for rating!</span>}
             </div>
             <div className="mb-4">
               <span className="text-2xl font-bold text-gray-900">R{product.price.toLocaleString()}</span>
@@ -146,6 +222,30 @@ const ProductDetail: React.FC = () => {
             </div>
           </div>
         </div>
+      </div>
+      {/* User Reviews Section */}
+      <div className="max-w-4xl mx-auto mt-8 bg-white rounded-lg shadow-lg p-8">
+        <h2 className="text-2xl font-bold mb-4">User Reviews</h2>
+        {reviewsLoading ? (
+          <div>Loading reviews...</div>
+        ) : reviews.length === 0 ? (
+          <div className="text-gray-500">No reviews yet.</div>
+        ) : (
+          <div className="space-y-6">
+            {reviews.map((review) => (
+              <div key={review.id} className="border-b pb-4">
+                <div className="flex items-center mb-1">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
+                  ))}
+                  <span className="ml-2 text-sm text-gray-700 font-semibold">{review.userName}</span>
+                  <span className="ml-2 text-xs text-gray-400">{new Date(review.date).toLocaleDateString()}</span>
+                </div>
+                <div className="text-gray-700 text-sm">{review.comment || <span className="italic text-gray-400">No comment</span>}</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

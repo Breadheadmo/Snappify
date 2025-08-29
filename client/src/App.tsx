@@ -15,6 +15,8 @@ import { AuthProvider } from './contexts/AuthContext';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Profile from './pages/Profile';
+import OrderHistory from './pages/OrderHistory';
+import OrderDetails from './pages/OrderDetails';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminProducts from './pages/AdminProducts';
 import AdminProductForm from './pages/AdminProductForm';
@@ -43,6 +45,10 @@ function App() {
                 <Header />
                 <main className="flex-grow">
                   <Routes>
+                    <Route path="/request-reset" element={React.createElement(require('./pages/RequestPasswordReset').default)} />
+                    <Route path="/reset-password/:token" element={React.createElement(require('./pages/ResetPassword').default)} />
+                    <Route path="/request-email-verification" element={React.createElement(require('./pages/RequestEmailVerification').default)} />
+                    <Route path="/verify-email/:token" element={React.createElement(require('./pages/VerifyEmail').default)} />
                     <Route path="/" element={<Home />} />
                     <Route path="/products" element={<Products />} />
                     <Route path="/products/:id" element={<ProductDetail />} />
@@ -52,6 +58,8 @@ function App() {
                     <Route path="/login" element={<Login />} />
                     <Route path="/signup" element={<Signup />} />
                     <Route path="/profile" element={<Profile />} />
+                    <Route path="/orders" element={<OrderHistory />} />
+                    <Route path="/orders/:orderId" element={<OrderDetails />} />
                     {/* Admin Routes */}
                     <Route path="/admin" element={<AdminDashboard />} />
                     <Route path="/admin/products" element={<AdminProducts />} />
@@ -61,6 +69,8 @@ function App() {
                     <Route path="/admin/categories/new" element={<AdminCategories />} />
                     <Route path="/admin/inventory" element={<AdminInventory />} />
                     <Route path="/admin/inventory/low-stock" element={<AdminInventory />} />
+                    <Route path="/admin/users" element={React.createElement(require('./pages/AdminUsers').default)} />
+                    <Route path="/admin/orders" element={React.createElement(require('./pages/AdminOrders').default)} />
                   </Routes>
                 </main>
                 <Footer />

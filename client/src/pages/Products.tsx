@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Grid, List, Star, ShoppingCart } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import { productApi } from '../services/api';
@@ -14,11 +13,18 @@ const Products: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const { addToCart, refreshCart } = useCart();
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
     const loadProducts = async () => {
+      setLoading(true);
       try {
-        const result = await productApi.getProducts();
+        const category = searchParams.get('category');
+        const filters: any = {};
+        if (category) {
+          filters.category = category;
+        }
+        const result = await productApi.getProducts(filters);
         setProducts(result.products);
       } catch (error) {
         setProducts([]);
@@ -27,7 +33,7 @@ const Products: React.FC = () => {
       }
     };
     loadProducts();
-  }, []);
+  }, [searchParams]);
 
   const handleAddToCart = async (product: Product) => {
     try {

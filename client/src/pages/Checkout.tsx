@@ -211,9 +211,36 @@ const Checkout: React.FC = () => {
         expiryDate: paymentFields.expiryDate.value,
         cvv: paymentFields.cvv.value
       };
-      // Call backend checkout API
-      const { orderId: backendOrderId } = await import('../services/api').then(mod => mod.cartApi.checkout(shippingDetails, paymentDetails));
-      setOrderId(backendOrderId || `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`);
+      // Prepare orderItems for backend
+      const orderItems = cartState.items.map(item => ({
+        product: String(item.product._id || item.product.id),
+        name: item.product.name,
+        quantity: item.quantity,
+        image: item.product.image,
+        price: item.product.price
+      }));
+
+      // Prepare shippingMethod for backend
+      const shippingMethod = {
+        name: selectedShipping.name,
+        price: selectedShipping.price,
+        description: selectedShipping.description
+      };
+
+      // Call backend checkout API with correct arguments
+      const response = await import('../services/api').then(mod =>
+        mod.cartApi.checkout(
+          orderItems,
+          shippingDetails,
+          'Credit Card', // paymentMethod (hardcoded for now)
+          shippingMethod,
+          tax,
+          shippingCost,
+          subtotal,
+          total
+        )
+      );
+      setOrderId(response.orderId || `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`);
       clearCart();
       // Refresh products after order to update stock
       await import('../contexts/SearchContext').then(mod => mod.useSearch().searchProducts());
@@ -235,10 +262,11 @@ const Checkout: React.FC = () => {
   
   // Redirect to cart if cart is empty
   React.useEffect(() => {
-    if (cartState.itemCount === 0 && !orderComplete) {
+    // Only redirect to cart if cart is empty AND not already in checkout flow
+    if (cartState.itemCount === 0 && currentStep !== 'confirmation' && !orderComplete) {
       navigate('/cart');
     }
-  }, [cartState.itemCount, navigate, orderComplete]);
+  }, [cartState.itemCount, navigate, orderComplete, currentStep]);
   
   return (
     <div className="bg-gray-50 min-h-screen py-8">
@@ -536,10 +564,10 @@ const Checkout: React.FC = () => {
                   ) : (
                     <div>{/* Empty div to maintain flex spacing */}</div>
                   )}
-                  
+
                   <button
                     onClick={handleNextStep}
-                    disabled={isProcessing}
+                    disabled={isProcessing || (currentStep === 'shipping' && Object.values(shippingFields).some(field => !field.value.trim()))}
                     className="px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                   >
                     {isProcessing ? (

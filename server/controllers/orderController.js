@@ -1,5 +1,6 @@
 const asyncHandler = require('../middleware/asyncHandler');
 const Order = require('../models/orderModel');
+const Coupon = require('../models/couponModel');
 const Product = require('../models/productModel');
 
 /**
@@ -17,12 +18,52 @@ const createOrder = asyncHandler(async (req, res) => {
     shippingPrice,
     subtotal,
     totalPrice,
+    couponCode,
   } = req.body;
 
   if (orderItems && orderItems.length === 0) {
     res.status(400);
     throw new Error('No order items');
   } else {
+    let discount = 0;
+    let appliedCoupon = null;
+    let finalTotal = totalPrice;
+    // If couponCode is provided, validate and calculate discount
+    if (couponCode) {
+      const coupon = await Coupon.findOne({ code: couponCode, active: true });
+      if (!coupon) {
+        res.status(400);
+        throw new Error('Invalid or inactive coupon code');
+      }
+      if (coupon.expiresAt && coupon.expiresAt < Date.now()) {
+        res.status(400);
+        throw new Error('Coupon expired');
+      }
+      if (coupon.usageLimit > 0 && coupon.usedCount >= coupon.usageLimit) {
+        res.status(400);
+        throw new Error('Coupon usage limit reached');
+      }
+      if (totalPrice < coupon.minOrder) {
+        res.status(400);
+        throw new Error('Order total does not meet minimum requirement for coupon');
+      }
+      if (coupon.type === 'percent') {
+        discount = (totalPrice * coupon.value) / 100;
+        if (coupon.maxDiscount > 0) {
+          discount = Math.min(discount, coupon.maxDiscount);
+        }
+      } else {
+        discount = coupon.value;
+        if (coupon.maxDiscount > 0) {
+          discount = Math.min(discount, coupon.maxDiscount);
+        }
+      }
+      finalTotal = totalPrice - discount;
+      appliedCoupon = coupon.code;
+      // Increment usedCount
+      coupon.usedCount += 1;
+      await coupon.save();
+    }
     // Create new order
     const order = new Order({
       orderItems,
@@ -33,7 +74,9 @@ const createOrder = asyncHandler(async (req, res) => {
       taxPrice,
       shippingPrice,
       subtotal,
-      totalPrice,
+      totalPrice: finalTotal,
+      discount,
+      coupon: appliedCoupon,
     });
 
     // Update product stock quantities

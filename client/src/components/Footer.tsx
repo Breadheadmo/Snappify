@@ -10,9 +10,7 @@ const Footer: React.FC = () => {
           {/* Company Info */}
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center space-x-2 mb-4">
-              <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">T</span>
-              </div>
+              <img src={require('../assets/images/Logo.png')} alt="Logo" className="w-8 h-8 rounded-lg object-contain" />
               <span className="text-xl font-bold">TechStore</span>
             </div>
             <p className="text-gray-300 mb-4 max-w-md">
