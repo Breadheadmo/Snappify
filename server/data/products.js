@@ -69,6 +69,8 @@ const products = [
     weight: '120g',
     dimensions: '6.8 x 3.2 x 3.2 cm',
     warranty: '2 years'
+  ,colors: ['white', 'black', 'blue']
+  ,models: ['iPhone 14 Pro', 'Samsung S23', 'Pixel 7', 'Huawei P50']
   },
 
   // Wireless Chargers
@@ -105,6 +107,8 @@ const products = [
     weight: '150g',
     dimensions: '10 x 10 x 0.8 cm',
     warranty: '1 year'
+  ,colors: ['black', 'silver']
+  ,models: ['iPhone 14 Pro', 'Samsung S23', 'Pixel 7', 'Huawei P50']
   },
 
   // Earphones & AirPods
@@ -177,6 +181,8 @@ const products = [
     weight: '45g',
     dimensions: '15.5 x 7.8 x 1.2 cm',
     warranty: '6 months'
+  ,colors: ['clear', 'black', 'blue', 'purple']
+  ,models: ['iPhone 14 Pro', 'Samsung S23', 'Pixel 7', 'Huawei P50']
   },
 
   // Screen Protectors
@@ -213,6 +219,8 @@ const products = [
     weight: '20g',
     dimensions: '15.1 x 7.1 x 0.33 cm',
     warranty: '6 months'
+  ,colors: ['clear']
+  ,models: ['iPhone 14 Pro', 'Samsung S23', 'Pixel 7', 'Huawei P50']
   },
 
   // USB Cables
@@ -249,6 +257,8 @@ const products = [
     weight: '80g',
     dimensions: '200 x 1.2 x 0.8 cm',
     warranty: '1 year'
+  ,colors: ['white', 'black']
+  ,models: ['iPhone 14 Pro', 'Samsung S23', 'Pixel 7', 'Huawei P50']
   },
 
   // Flash Drives

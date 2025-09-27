@@ -23,6 +23,9 @@ interface Review {
 }
 
 const ProductDetail: React.FC = () => {
+  // Color and model selection state
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [selectedModel, setSelectedModel] = useState<string | null>(null);
   // Carousel state
   const [currentImageIdx, setCurrentImageIdx] = useState(0);
   // Remove duplicate images declaration; use images from product below
@@ -115,8 +118,15 @@ const ProductDetail: React.FC = () => {
 
   const handleAddToCart = () => {
     if (product) {
-      // TODO: Implement cart functionality
-      console.log('Adding to cart:', { ...product, quantity });
+      // Pass selected options to cart logic (extend as needed)
+      const cartItem = {
+        ...product,
+        quantity,
+        color: selectedColor,
+        model: selectedModel,
+      };
+      console.log('Adding to cart:', cartItem);
+      // TODO: Integrate with actual cart logic if needed
     }
   };
 
@@ -160,7 +170,7 @@ const ProductDetail: React.FC = () => {
     : [product.image || 'https://via.placeholder.com/400x300?text=Product+Image'];
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10">
+  <div className="min-h-screen bg-gray-50 py-10">
       <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8 flex flex-col md:flex-row gap-8">
         <div className="flex-1 flex flex-col items-center justify-center">
           <Carousel className="w-full max-w-xs">
@@ -182,6 +192,40 @@ const ProductDetail: React.FC = () => {
           </Carousel>
           {!product.inStock && (
             <span className="px-3 py-1 bg-red-500 text-white rounded-full text-xs font-medium">Out of Stock</span>
+          )}
+          {/* Color Picker */}
+          {product.colors && product.colors.length > 0 && (
+            <div className="mt-4 w-full">
+              <h3 className="text-sm font-semibold mb-2">Choose Color:</h3>
+              <div className="flex gap-2 flex-wrap">
+                {product.colors.map((color: string) => (
+                  <button
+                    key={color}
+                    type="button"
+                    className={`w-8 h-8 rounded-full border-2 transition-all duration-200 focus:outline-none ${selectedColor === color ? 'border-primary-600 ring-2 ring-primary-400' : 'border-gray-300'} bg-[${color}]`}
+                    style={{ backgroundColor: color }}
+                    onClick={() => setSelectedColor(color)}
+                    aria-label={color}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+          {/* Model Picker for Screen Protectors and Chargers */}
+          {(product.category.toLowerCase().includes('screen protector') || product.category.toLowerCase().includes('charger')) && product.models && product.models.length > 0 && (
+            <div className="mt-4 w-full">
+              <h3 className="text-sm font-semibold mb-2">Choose Phone Model:</h3>
+              <select
+                className="w-full border rounded p-2"
+                value={selectedModel || ''}
+                onChange={e => setSelectedModel(e.target.value)}
+              >
+                <option value="" disabled>Select model</option>
+                {product.models.map((model: string) => (
+                  <option key={model} value={model}>{model}</option>
+                ))}
+              </select>
+            </div>
           )}
         </div>
         <div className="flex-1 flex flex-col justify-between">

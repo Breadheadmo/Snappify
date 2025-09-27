@@ -61,19 +61,21 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
   return (
     <div 
       ref={cardRef}
-      className={`card product-card group ${isVisible ? 'fade-in-up' : 'opacity-0'}`}
+      className={`card product-card group relative overflow-hidden ${isVisible ? 'fade-in-up' : 'opacity-0'} shadow-lg`}
       style={{ 
         transitionDelay: isVisible ? '0.1s' : '0s',
         transform: isVisible ? 'translateY(0)' : 'translateY(30px)'
       }}
     >
       <div className="relative overflow-hidden rounded-t-xl image-zoom">
+        {/* Shimmer effect while loading */}
+        <div className={`absolute inset-0 z-10 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-shimmer rounded-t-xl ${imageLoaded ? 'opacity-0' : 'opacity-100'} transition-opacity duration-700`}></div>
         <img
           src={mainImage}
           alt={product.name}
           className={`w-full h-48 object-cover transition-all duration-500 ${
             imageLoaded ? 'image-loaded' : 'image-loading'
-          }`}
+          } scale-100 group-hover:scale-105`}
           onLoad={() => setImageLoaded(true)}
           onError={(e) => {
             const target = e.target as HTMLImageElement;
@@ -84,44 +86,44 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
         
         {/* Discount Badge */}
         {product.discount && (
-          <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium animate-pulse">
+          <div className="absolute top-2 left-2 bg-gradient-to-r from-red-500 to-pink-500 text-white px-2 py-1 rounded-full text-xs font-bold shadow-lg animate-bounce">
             {product.discount}% OFF
           </div>
         )}
         
         {/* Stock Status */}
         {!product.inStock && (
-          <div className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium animate-pulse">
+          <div className="absolute top-2 right-2 bg-gradient-to-r from-gray-700 to-red-500 text-white px-2 py-1 rounded-full text-xs font-bold shadow-lg animate-pulse">
             Out of Stock
           </div>
         )}
         
         {/* Category Badge */}
-        <div className="absolute top-2 left-2 bg-primary-600 text-white px-2 py-1 rounded-full text-xs font-medium">
+        <div className="absolute bottom-2 left-2 bg-primary-600/90 text-white px-2 py-1 rounded-full text-xs font-semibold shadow-md animate-fade-in">
           {product.category}
         </div>
         
         {/* Wishlist Button */}
         <button
           onClick={handleWishlistToggle}
-          className={`absolute top-2 right-2 p-2 rounded-full transition-all duration-300 ${
+          className={`absolute top-2 right-2 p-2 rounded-full shadow-md transition-all duration-300 hover:scale-110 ${
             isInWishlist(product.id)
-              ? 'bg-red-500 text-white'
+              ? 'bg-red-500 text-white animate-heartbeat'
               : 'bg-white/80 text-gray-600 hover:bg-white'
           }`}
         >
           <Heart 
             className={`h-4 w-4 ${
-              isInWishlist(product.id) ? 'fill-current' : ''
+              isInWishlist(product.id) ? 'fill-current animate-heartbeat' : ''
             }`} 
           />
         </button>
         
         {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+  <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
       </div>
       
-      <div className="p-4">
+  <div className="p-4 animate-fade-in">
         {/* Brand */}
         {product.brand && (
           <div className="text-xs text-gray-500 mb-1">{product.brand}</div>
@@ -130,7 +132,9 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
         {/* Product Name */}
         <Link to={`/products/${product.id}`}>
           <h3 className="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors line-clamp-2 mb-2">
-            {product.name}
+            <span className="transition-colors duration-300 group-hover:text-primary-600 group-hover:underline">
+              {product.name}
+            </span>
           </h3>
         </Link>
         
@@ -140,7 +144,7 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
             {renderStars(product.rating)}
           </div>
           <span className="text-sm text-gray-600">
-            ({product.reviews})
+            <span className="ml-1 text-xs text-gray-400">({product.reviews})</span>
           </span>
         </div>
         
@@ -148,11 +152,13 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <span className="text-2xl font-bold text-gray-900 price-tag">
-              R{product.price.toLocaleString()}
+              <span className="bg-gradient-to-r from-primary-600 to-primary-400 bg-clip-text text-transparent animate-gradient-text">
+                R{product.price.toLocaleString()}
+              </span>
             </span>
             {product.originalPrice && product.originalPrice > product.price && (
               <span className="text-sm text-gray-500 line-through">
-                R{product.originalPrice.toLocaleString()}
+                <span className="animate-fade-in">R{product.originalPrice.toLocaleString()}</span>
               </span>
             )}
           </div>
@@ -165,7 +171,7 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
               {product.features.slice(0, 2).map((feature, index) => (
                 <span
                   key={index}
-                  className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded"
+                  className="text-xs bg-primary-50 text-primary-700 px-2 py-1 rounded shadow-sm animate-fade-in"
                 >
                   {feature}
                 </span>
@@ -183,15 +189,15 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
         <button
           onClick={() => onAddToCart(product)}
           disabled={!product.inStock}
-          className={`w-full py-2 px-4 rounded-lg font-medium transition-all duration-300 cart-btn-pulse ${
+          className={`w-full py-2 px-4 rounded-lg font-medium transition-all duration-300 cart-btn-pulse shadow-md ${
             product.inStock
-              ? 'bg-primary-600 hover:bg-primary-700 text-white hover:scale-105'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              ? 'bg-primary-600 hover:bg-primary-700 text-white hover:scale-105 animate-bounce'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed animate-pulse'
           }`}
         >
           <div className="flex items-center justify-center space-x-2">
-            <ShoppingCart className="h-4 w-4" />
-            <span>
+            <ShoppingCart className="h-4 w-4 animate-fade-in" />
+            <span className="animate-fade-in">
               {isInCart(product.id.toString()) 
                 ? 'In Cart' 
                 : product.inStock 

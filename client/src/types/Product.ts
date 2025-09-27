@@ -28,6 +28,8 @@ export interface Product {
   warranty: string;
   returnPolicy?: string;
   shippingInfo?: string;
+  colors?: string[];
+  models?: string[];
 }
 
 
