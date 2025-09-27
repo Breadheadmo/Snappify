@@ -5,6 +5,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { Navigate, useNavigate, useParams, Link } from 'react-router-dom';
 
 interface ProductFormData {
+  colors: string[];
+  models: string[];
   name: string;
   price: number;
   originalPrice: number;
@@ -31,6 +33,8 @@ const AdminProductForm: React.FC = () => {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   const [formData, setFormData] = useState<ProductFormData>({
+    colors: [''],
+    models: [''],
     name: '',
     price: 0,
     originalPrice: 0,
@@ -115,6 +119,8 @@ const AdminProductForm: React.FC = () => {
       if (response.ok) {
         const product = await response.json();
         setFormData({
+          colors: product.colors?.length ? product.colors : [''],
+          models: product.models?.length ? product.models : [''],
           name: product.name || '',
           price: product.price || 0,
           originalPrice: product.originalPrice || 0,
@@ -142,6 +148,8 @@ const AdminProductForm: React.FC = () => {
     e.preventDefault();
     setSubmitLoading(true);
 
+
+
     // Validate required fields
     const requiredFields = [
       formData.name,
@@ -159,6 +167,8 @@ const AdminProductForm: React.FC = () => {
 
     // Prepare FormData for file upload
     const form = new FormData();
+    form.append('colors', JSON.stringify(formData.colors.filter(c => c.trim() !== '')));
+    form.append('models', JSON.stringify(formData.models.filter(m => m.trim() !== '')));
     form.append('name', formData.name);
     form.append('price', String(formData.price));
     form.append('originalPrice', String(formData.originalPrice));
@@ -217,15 +227,15 @@ const AdminProductForm: React.FC = () => {
   const addArrayItem = (field: keyof Pick<ProductFormData, 'images' | 'features' | 'tags'>) => {
     setFormData(prev => ({
       ...prev,
-      [field]: [...prev[field], '']
+      [field]: [...(prev[field] as string[]), '']
     }));
   };
 
   const removeArrayItem = (field: keyof Pick<ProductFormData, 'images' | 'features' | 'tags'>, index: number) => {
-    if (formData[field].length > 1) {
+    if ((formData[field] as string[]).length > 1) {
       setFormData(prev => ({
         ...prev,
-        [field]: prev[field].filter((_, i) => i !== index)
+        [field]: (prev[field] as string[]).filter((_, i) => i !== index)
       }));
     }
   };
@@ -456,6 +466,70 @@ const AdminProductForm: React.FC = () => {
           </div>
 
           {/* Features */}
+          {/* Colors */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Available Colors</h3>
+            {formData.colors.map((color, index) => (
+              <div key={index} className="flex items-center space-x-2 mb-3">
+                <input
+                  type="text"
+                  placeholder="Color (e.g. Black, Blue, Red)"
+                  value={color}
+                  onChange={(e) => handleArrayChange('colors' as any, index, e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {formData.colors.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => removeArrayItem('colors' as any, index)}
+                    className="px-3 py-2 bg-red-100 text-red-600 rounded-md hover:bg-red-200"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() => addArrayItem('colors' as any)}
+              className="mt-2 px-4 py-2 bg-blue-100 text-blue-600 rounded-md hover:bg-blue-200"
+            >
+              Add Color
+            </button>
+          </div>
+          {/* Models (for chargers and screen protectors) */}
+          {(formData.category.toLowerCase().includes('charger') || formData.category.toLowerCase().includes('screen protector')) && (
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Supported Phone Models</h3>
+              {formData.models.map((model, index) => (
+                <div key={index} className="flex items-center space-x-2 mb-3">
+                  <input
+                    type="text"
+                    placeholder="Phone Model (e.g. iPhone 14 Pro)"
+                    value={model}
+                    onChange={(e) => handleArrayChange('models' as any, index, e.target.value)}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {formData.models.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeArrayItem('models' as any, index)}
+                      className="px-3 py-2 bg-red-100 text-red-600 rounded-md hover:bg-red-200"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => addArrayItem('models' as any)}
+                className="mt-2 px-4 py-2 bg-blue-100 text-blue-600 rounded-md hover:bg-blue-200"
+              >
+                Add Model
+              </button>
+            </div>
+          )}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Features</h3>
             {formData.features.map((feature, index) => (
