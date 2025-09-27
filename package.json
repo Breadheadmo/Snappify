@@ -5,7 +5,19 @@
   "scripts": {
     "start": "cd client && npm start",
     "build": "cd client && npm run build",
-    "install-all": "cd client && npm install"
+    "install-all": "npm run install-client && npm run install-server",
+    "install-client": "cd client && npm install",
+    "install-server": "cd server && npm install",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "cd server && npm run dev",
+    "client": "cd client && npm start",
+    "start:prod": "cd server && npm start",
+    "build:prod": "npm run install-all && cd client && npm run build",
+    "docker:build": "docker build -t snappify-ecommerce .",
+    "docker:run": "docker-compose up -d",
+    "docker:stop": "docker-compose down",
+    "deploy": "npm run build:prod && npm run docker:build",
+    "heroku-postbuild": "cd client && npm install && npm run build"
   },
   "keywords": [
     "ecommerce",
@@ -17,6 +29,8 @@
   "license": "MIT",
   "dependencies": {
     "chart.js": "^4.5.0",
+    "node-fetch": "^3.3.2",
+    "nodemailer": "^7.0.6",
     "react-chartjs-2": "^5.3.0"
   }
 }

@@ -4,6 +4,7 @@ import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import FormInput from '../components/FormInput';
 import FormSelect from '../components/FormSelect';
+import PaystackPayment from '../components/PaystackPayment';
 import { createFieldState, updateFieldState, isFormValid } from '../utils/validation';
 import { CreditCard, Truck, CheckCircle, AlertCircle } from 'lucide-react';
 
@@ -158,29 +159,7 @@ const Checkout: React.FC = () => {
         return;
       }
       
-      setCurrentStep('payment');
-      setError('');
-    } else if (currentStep === 'payment') {
-      // Mark all payment fields as touched
-      const touchedPaymentFields = Object.keys(paymentFields).reduce((acc, key) => {
-        const fieldKey = key as keyof typeof paymentFields;
-        return {
-          ...acc,
-          [fieldKey]: {
-            ...paymentFields[fieldKey],
-            touched: true
-          }
-        };
-      }, {} as typeof paymentFields);
-      
-      setPaymentFields(touchedPaymentFields);
-      
-      // Check if payment form is valid
-      if (!isFormValid(touchedPaymentFields)) {
-        setError('Please fill out all payment details correctly');
-        return;
-      }
-      
+      // Create order and then move to payment
       handlePlaceOrder();
     }
   };
@@ -205,12 +184,7 @@ const Checkout: React.FC = () => {
         country: shippingFields.country.value,
         phoneNumber: shippingFields.phoneNumber.value
       };
-      const paymentDetails = {
-        cardNumber: paymentFields.cardNumber.value.replace(/\D/g, ''),
-        cardholderName: paymentFields.cardholderName.value,
-        expiryDate: paymentFields.expiryDate.value,
-        cvv: paymentFields.cvv.value
-      };
+      
       // Prepare orderItems for backend
       const orderItems = cartState.items.map(item => ({
         product: String(item.product._id || item.product.id),
@@ -227,12 +201,12 @@ const Checkout: React.FC = () => {
         description: selectedShipping.description
       };
 
-      // Call backend checkout API with correct arguments
+      // Call backend checkout API to create order
       const response = await import('../services/api').then(mod =>
         mod.cartApi.checkout(
           orderItems,
           shippingDetails,
-          'Credit Card', // paymentMethod (hardcoded for now)
+          'Paystack', // paymentMethod
           shippingMethod,
           tax,
           shippingCost,
@@ -240,16 +214,40 @@ const Checkout: React.FC = () => {
           total
         )
       );
-      setOrderId(response.orderId || `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`);
+      
+      const newOrderId = response.orderId || `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      setOrderId(newOrderId);
+      
+      // Now proceed to payment step
+      setCurrentStep('payment');
+      setError('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred while creating your order');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+  
+  const handlePaymentSuccess = async (paymentResult: any) => {
+    try {
+      console.log('Payment successful:', paymentResult);
+      
+      // Clear cart after successful payment
       clearCart();
+      
       // Refresh products after order to update stock
-      await import('../contexts/SearchContext').then(mod => mod.useSearch().searchProducts());
+      try {
+        await import('../contexts/SearchContext').then(mod => mod.useSearch().searchProducts());
+      } catch (e) {
+        console.warn('Could not refresh products:', e);
+      }
+      
+      // Move to confirmation step
       setCurrentStep('confirmation');
       setOrderComplete(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred while processing your order');
-    } finally {
-      setIsProcessing(false);
+      console.error('Error processing payment success:', err);
+      setError('Payment was successful but there was an error processing your order. Please contact support.');
     }
   };
   
@@ -424,51 +422,17 @@ const Checkout: React.FC = () => {
             {currentStep === 'payment' && (
               <div className="p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-6">Payment Information</h2>
-                
-                <div className="space-y-4">
-                  <FormInput
-                    id="cardNumber"
-                    label="Card Number"
-                    type="text"
-                    placeholder="1234 5678 9012 3456"
-                    fieldState={paymentFields.cardNumber}
-                    onChange={(value) => updatePaymentField('cardNumber', formatCardNumber(value))}
-                    maxLength={19}
+                <div className="mb-6">
+                  <PaystackPayment
+                    orderId={orderId || ''}
+                    amount={total}
+                    email={user?.email}
+                    firstName={user?.username}
+                    lastName={""}
+                    phone={shippingFields.phoneNumber.value}
+                    onSuccess={handlePaymentSuccess}
+                    onClose={() => setError('Payment was cancelled')}
                   />
-                  
-                  <FormInput
-                    id="cardholderName"
-                    label="Cardholder Name"
-                    type="text"
-                    placeholder="Name as it appears on card"
-                    fieldState={paymentFields.cardholderName}
-                    onChange={(value) => updatePaymentField('cardholderName', value)}
-                  />
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormInput
-                      id="expiryDate"
-                      label="Expiry Date"
-                      type="text"
-                      placeholder="MM/YY"
-                      fieldState={paymentFields.expiryDate}
-                      onChange={(value) => updatePaymentField('expiryDate', formatExpiryDate(value))}
-                      maxLength={5}
-                    />
-                    
-                    <FormInput
-                      id="cvv"
-                      label="CVV"
-                      type="text"
-                      placeholder="123"
-                      fieldState={paymentFields.cvv}
-                      onChange={(value) => {
-                        const digitsOnly = value.replace(/\D/g, '');
-                        updatePaymentField('cvv', digitsOnly.slice(0, 3));
-                      }}
-                      maxLength={3}
-                    />
-                  </div>
                 </div>
               </div>
             )}

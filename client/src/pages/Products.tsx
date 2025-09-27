@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNotification } from '../contexts/NotificationContext';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Grid, List, Star, ShoppingCart } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
@@ -9,7 +10,7 @@ import { useSearch } from '../contexts/SearchContext';
 import { useCart } from '../contexts/CartContext';
 
 const Products: React.FC = () => {
-  const [cartMessage, setCartMessage] = useState<string | null>(null);
+  const { showNotification } = useNotification();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const { addToCart, refreshCart } = useCart();
@@ -39,11 +40,9 @@ const Products: React.FC = () => {
     try {
       await addToCart(product);
       await refreshCart();
-      setCartMessage(`${product.name} added to cart!`);
-      setTimeout(() => setCartMessage(null), 2000);
+      showNotification(`${product.name} added to cart!`, 'success');
     } catch (error) {
-      setCartMessage('Failed to add product to cart. Please try again.');
-      setTimeout(() => setCartMessage(null), 2000);
+      showNotification('Failed to add product to cart. Please try again.', 'error');
     }
   };
 
@@ -53,11 +52,7 @@ const Products: React.FC = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Products</h1>
           <p className="text-gray-600">Browse all available products in our store</p>
-          {cartMessage && (
-            <div className="fixed top-6 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 transition-all">
-              {cartMessage}
-            </div>
-          )}
+          {/* Notification handled by NotificationProvider */}
         </div>
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Menu, X, Search, ShoppingCart, Heart, User, ChevronDown } from 'lucide-react';
+import { Menu, X, Search, ShoppingCart, Heart, User, ChevronDown, Package } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import { useWishlist } from '../contexts/WishlistContext';
 import { useAuth } from '../contexts/AuthContext';
+import TrackingForm from './TrackingForm';
 
 const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -21,16 +22,10 @@ const Header: React.FC = () => {
   ];
 
   const categories = [
-    'Electronics',
-    'Wearables',
-    'Accessories',
-    'Displays',
-    'Audio',
-    'Computers',
-    'Cameras',
-    'Storage',
-    'Home',
-    'Gaming'
+    'Power & Charging',
+    'Audio & Sound', 
+    'Phone Protection',
+    'Storage & Connectivity'
   ];
 
   return (
@@ -40,7 +35,7 @@ const Header: React.FC = () => {
           {/* Logo */}
           <div className="flex-shrink-0">
             <Link to="/" className="flex items-center">
-              <img src={require('../assets/images/Logo1.png')} alt="Logo" className="w-8 h-8 mr-2 rounded-lg object-contain" />
+              <img src={require('../assets/images/Logo.png')} alt="Logo" className="w-8 h-8 mr-2 rounded-lg object-contain" />
             </Link>
           </div>
 
@@ -78,8 +73,13 @@ const Header: React.FC = () => {
             </div>
           </nav>
 
-          {/* Right side - Search, Cart, Wishlist, User */}
+          {/* Right side - Search, Tracking, Cart, Wishlist, User */}
           <div className="flex items-center space-x-4">
+            {/* Tracking Form */}
+            <div className="hidden lg:block">
+              <TrackingForm />
+            </div>
+
             {/* Search Button */}
             <button
               onClick={() => setIsSearchOpen(!isSearchOpen)}

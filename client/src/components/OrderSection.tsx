@@ -42,11 +42,19 @@ const OrderSection: React.FC = () => {
         setLoading(true);
         // Use the API service to fetch orders
         const ordersData = await api.orders.getOrders();
-        console.log('Fetched orders:', ordersData);
-        setOrders(ordersData);
+        console.log('Fetched orders in OrderSection:', ordersData);
+        
+        // Ensure ordersData is an array before setting it
+        if (Array.isArray(ordersData)) {
+          setOrders(ordersData);
+        } else {
+          console.warn('Orders data is not an array:', ordersData);
+          setOrders([]);
+        }
       } catch (err) {
         console.error('Error fetching orders:', err);
         setError('Failed to load your orders. Please try again later.');
+        setOrders([]); // Ensure orders is always an array
       } finally {
         setLoading(false);
       }
@@ -137,7 +145,7 @@ const OrderSection: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {orders.map((order) => (
+      {Array.isArray(orders) && orders.map((order) => (
         <div key={order.id} className="bg-white border border-gray-200 rounded-lg overflow-hidden">
           {/* Order Header */}
           <div className="p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-200">
@@ -148,11 +156,11 @@ const OrderSection: React.FC = () => {
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-sm text-gray-500">
-                  {new Date(order.date).toLocaleDateString('en-US', {
+                  {order.date ? new Date(order.date).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric'
-                  })}
+                  }) : 'Date not available'}
                 </span>
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClass(order.status)}`}>
                   {getStatusIcon(order.status)}
@@ -162,7 +170,7 @@ const OrderSection: React.FC = () => {
             </div>
             <div className="flex flex-col items-end mt-3 sm:mt-0">
               <span className="text-sm text-gray-500 mb-1">Total Amount</span>
-              <span className="text-lg font-bold text-gray-900">R{order.total.toLocaleString()}</span>
+              <span className="text-lg font-bold text-gray-900">R{(order.total || 0).toLocaleString()}</span>
               <button
                 onClick={() => toggleOrderExpand(order.id)}
                 className="mt-2 text-primary-600 hover:text-primary-700 flex items-center text-sm font-medium"
@@ -188,13 +196,17 @@ const OrderSection: React.FC = () => {
               {/* Items List */}
               <h4 className="text-sm font-medium text-gray-900 mb-3">Order Items</h4>
               <div className="space-y-3 mb-6">
-                {order.items.map((item, idx) => (
+                {(order.items || []).map((item, idx) => {
+                  if (!item || !item.product) {
+                    return null; // Skip invalid items
+                  }
+                  return (
                   <div key={idx} className="flex items-center justify-between">
                     <div className="flex items-center">
                       <div className="w-12 h-12 flex-shrink-0 mr-3">
                         <img 
-                          src={item.product.image} 
-                          alt={item.product.name}
+                          src={item.product.image || 'https://via.placeholder.com/48?text=Product'} 
+                          alt={item.product.name || 'Product'}
                           className="w-full h-full object-cover rounded-md"
                           onError={(e) => {
                             const target = e.target as HTMLImageElement;
@@ -204,19 +216,20 @@ const OrderSection: React.FC = () => {
                       </div>
                       <div>
                         <Link 
-                          to={`/products/${item.product.id}`}
+                          to={`/products/${item.product.id || ''}`}
                           className="text-sm font-medium text-gray-900 hover:text-primary-600"
                         >
-                          {item.product.name}
+                          {item.product.name || 'Unknown Product'}
                         </Link>
-                        <p className="text-xs text-gray-500 mt-1">Quantity: {item.quantity}</p>
+                        <p className="text-xs text-gray-500 mt-1">Quantity: {item.quantity || 1}</p>
                       </div>
                     </div>
                     <span className="text-sm font-medium text-gray-900">
-                      R{(item.product.price * item.quantity).toLocaleString()}
+                      R{((item.product?.price || 0) * (item.quantity || 1)).toLocaleString()}
                     </span>
                   </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Shipping & Tracking Info */}
@@ -224,11 +237,11 @@ const OrderSection: React.FC = () => {
                 <div>
                   <h4 className="text-sm font-medium text-gray-900 mb-3">Shipping Address</h4>
                   <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-600">
-                    <p className="font-medium text-gray-900">{order.shippingAddress.fullName}</p>
-                    <p>{order.shippingAddress.addressLine1}</p>
-                    {order.shippingAddress.addressLine2 && <p>{order.shippingAddress.addressLine2}</p>}
-                    <p>{order.shippingAddress.city}, {order.shippingAddress.postalCode}</p>
-                    <p>{order.shippingAddress.country}</p>
+                    <p className="font-medium text-gray-900">{order.shippingAddress?.fullName || 'Name not available'}</p>
+                    <p>{order.shippingAddress?.addressLine1 || 'Address not available'}</p>
+                    {order.shippingAddress?.addressLine2 && <p>{order.shippingAddress.addressLine2}</p>}
+                    <p>{order.shippingAddress?.city || 'City'}, {order.shippingAddress?.postalCode || 'Postal Code'}</p>
+                    <p>{order.shippingAddress?.country || 'Country'}</p>
                   </div>
                 </div>
 

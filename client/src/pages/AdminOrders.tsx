@@ -137,6 +137,21 @@ const AdminOrders: React.FC = () => {
             </div>
             <div className="flex gap-2">
               <button onClick={handleUpdateStatus} className="bg-green-500 text-white px-4 py-2 rounded">Save</button>
+              <button
+                onClick={async () => {
+                  const token = localStorage.getItem('token');
+                  await fetch(`/api/orders/${selectedOrder._id}/refund`, {
+                    method: 'POST',
+                    headers: {
+                      'Authorization': `Bearer ${token}`,
+                      'Content-Type': 'application/json',
+                    },
+                  });
+                  setSelectedOrder(null);
+                  fetchOrders();
+                }}
+                className="bg-red-500 text-white px-4 py-2 rounded"
+              >Refund Order</button>
               <button onClick={() => setSelectedOrder(null)} className="bg-gray-300 px-4 py-2 rounded">Close</button>
             </div>
           </div>

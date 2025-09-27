@@ -38,7 +38,7 @@ function ApiTest() {
   
   return (
     <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-      <h1>Snappy API Test</h1>
+      <h1>Snappify API Test</h1>
       <p>Please check the console for API test results.</p>
     </div>
   );

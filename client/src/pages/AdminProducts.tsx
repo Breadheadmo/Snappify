@@ -30,6 +30,7 @@ const AdminProducts: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [showDeleteModal, setShowDeleteModal] = useState<string | null>(null);
+  const [showClearAllModal, setShowClearAllModal] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated && user?.isAdmin) {
@@ -116,6 +117,33 @@ const AdminProducts: React.FC = () => {
     }
   };
 
+  const handleClearAllProducts = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/admin/products/clear', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Cleared products:', result.message);
+        setProducts([]);
+        setShowClearAllModal(false);
+        alert(`Successfully deleted ${result.deletedCount} products`);
+      } else {
+        console.error('Failed to clear products');
+        alert('Failed to clear products');
+      }
+    } catch (error) {
+      console.error('Error clearing products:', error);
+      alert('Error clearing products');
+    }
+  };
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -158,12 +186,20 @@ const AdminProducts: React.FC = () => {
               </Link>
               <h1 className="text-2xl font-bold text-gray-900">Product Management</h1>
             </div>
-            <Link
-              to="/admin/products/new"
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-            >
-              Add New Product
-            </Link>
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setShowClearAllModal(true)}
+                className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
+              >
+                Clear All Products
+              </button>
+              <Link
+                to="/admin/products/new"
+                className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Add New Product
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -370,6 +406,32 @@ const AdminProducts: React.FC = () => {
               </button>
               <button
                 onClick={() => setShowDeleteModal(null)}
+                className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-300 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Clear All Products Confirmation Modal */}
+      {showClearAllModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-red-900 mb-4">⚠️ Clear All Products</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete <strong>ALL</strong> products? This will permanently remove every product from the database and cannot be undone.
+            </p>
+            <div className="flex space-x-3">
+              <button
+                onClick={handleClearAllProducts}
+                className="flex-1 bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 transition-colors"
+              >
+                Yes, Clear All
+              </button>
+              <button
+                onClick={() => setShowClearAllModal(false)}
                 className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-300 transition-colors"
               >
                 Cancel

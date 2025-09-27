@@ -1,13 +1,16 @@
 {
   "files": {
-    "main.css": "/static/css/main.72e9ab63.css",
-    "main.js": "/static/js/main.ba9dc122.js",
+    "main.css": "/static/css/main.f47a83ab.css",
+    "main.js": "/static/js/main.f92b7111.js",
+    "static/media/Audio.jpg": "/static/media/Audio.45e16916eae66a5a205e.jpg",
+    "static/media/Chargers.jpg": "/static/media/Chargers.057e1c74a830c08a5d9e.jpg",
+    "static/media/Logo.png": "/static/media/Logo.f000dd0a7206b38d1ba8.png",
     "index.html": "/index.html",
-    "main.72e9ab63.css.map": "/static/css/main.72e9ab63.css.map",
-    "main.ba9dc122.js.map": "/static/js/main.ba9dc122.js.map"
+    "main.f47a83ab.css.map": "/static/css/main.f47a83ab.css.map",
+    "main.f92b7111.js.map": "/static/js/main.f92b7111.js.map"
   },
   "entrypoints": [
-    "static/css/main.72e9ab63.css",
-    "static/js/main.ba9dc122.js"
+    "static/css/main.f47a83ab.css",
+    "static/js/main.f92b7111.js"
   ]
 }

@@ -1,4 +1,4 @@
-// API services for Snappy e-commerce application
+// API services for Snappify e-commerce application
 import { Product, CartItem } from '../types/Product';
 import { User } from '../types/User';
 
@@ -7,6 +7,35 @@ const API_BASE_URL = process.env.NODE_ENV === 'production'
   ? process.env.REACT_APP_API_URL || 'http://localhost:5001/api'
   : '/api'; // Use proxy in development
 console.log('API_BASE_URL:', API_BASE_URL); // Debug log
+
+/**
+ * Helper function to transform backend order format to frontend format
+ */
+export const transformBackendOrder = (backendOrder: any): any => {
+  return {
+    id: backendOrder._id || backendOrder.id,
+    date: backendOrder.createdAt || backendOrder.date,
+    status: backendOrder.status || backendOrder.orderStatus || 'pending',
+    total: backendOrder.totalPrice || backendOrder.total || 0,
+    items: (backendOrder.orderItems || []).map((item: any) => ({
+      product: {
+        id: item.product?._id || item.product?.id || item.product,
+        name: item.name || item.product?.name || 'Unknown Product',
+        image: item.image || item.product?.image || item.product?.images?.[0] || 'https://via.placeholder.com/48?text=Product',
+        price: item.price || item.product?.price || 0,
+      },
+      quantity: item.quantity || 1,
+    })),
+    trackingNumber: backendOrder.trackingNumber,
+    shippingAddress: backendOrder.shippingAddress || {
+      fullName: 'N/A',
+      addressLine1: 'N/A',
+      city: 'N/A',
+      postalCode: 'N/A',
+      country: 'N/A'
+    }
+  };
+};
 
 /**
  * Helper function to transform backend product format to frontend format
@@ -159,7 +188,7 @@ export const authApi = {
   /**
    * Register a new user
    */
-  register: async (username: string, email: string, password: string) => {
+  register: async (username: string, email: string, password: string, firstName?: string, lastName?: string) => {
     try {
       // For development/demo mode, use mock data
       if (process.env.REACT_APP_USE_MOCK_DATA === 'true') {
@@ -176,7 +205,7 @@ export const authApi = {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username, email, password }),
+        body: JSON.stringify({ username, email, password, firstName, lastName }),
       });
 
       return handleResponse(response);
@@ -385,7 +414,6 @@ export const productApi = {
    */
   getProducts: async (filters?: ProductFilters) => {
     try {
-
       // For production, use real API
       const queryParams = new URLSearchParams();
       
@@ -867,7 +895,12 @@ export const orderApi = {
         },
       });
 
-      return handleResponse(response);
+      const backendOrders = await handleResponse(response);
+      
+      // Transform backend orders to frontend format
+      const transformedOrders = (backendOrders || []).map(transformBackendOrder);
+      
+      return transformedOrders;
     } catch (error) {
       console.error('Error fetching orders:', error);
       throw error;

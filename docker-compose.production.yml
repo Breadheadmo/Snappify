@@ -1,0 +1,267 @@
+# 🚀 Snappy E-commerce - Production Docker Configuration
+# ======================================================
+
+services:
+  # 🗄️ MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: snappy-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: snappy-ecommerce
+    volumes:
+      - mongodb_data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d
+    networks:
+      - snappy-network
+    ports:
+      - "27017:27017"
+    command: mongod --auth --bind_ip_all
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 🔴 Redis Cache
+  redis:
+    image: redis:7.2-alpine
+    container_name: snappy-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - snappy-network
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 🖥️ Backend API Server
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile.production
+      args:
+        NODE_ENV: production
+    container_name: snappy-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 5001
+      MONGO_URI: mongodb://snappy-user:${MONGO_USER_PASSWORD}@mongodb:27017/snappy-ecommerce?authSource=snappy-ecommerce
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      JWT_SECRET: ${JWT_SECRET}
+      PAYSTACK_SECRET_KEY: ${PAYSTACK_SECRET_KEY}
+      PAYSTACK_PUBLIC_KEY: ${PAYSTACK_PUBLIC_KEY}
+      PAYSTACK_WEBHOOK_SECRET: ${PAYSTACK_WEBHOOK_SECRET}
+      EMAIL_USER: ${EMAIL_USER}
+      EMAIL_PASS: ${EMAIL_PASS}
+      FRONTEND_URL: https://${DOMAIN_NAME}
+    volumes:
+      - ./server/uploads:/app/uploads
+      - ./server/logs:/app/logs
+    networks:
+      - snappy-network
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+
+  # 🌐 Frontend React App
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile.production
+      args:
+        REACT_APP_API_URL: https://${DOMAIN_NAME}/api
+        REACT_APP_PAYSTACK_PUBLIC_KEY: ${PAYSTACK_PUBLIC_KEY}
+        REACT_APP_ENVIRONMENT: production
+    container_name: snappy-frontend
+    restart: unless-stopped
+    networks:
+      - snappy-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.25'
+
+  # 🔒 Nginx Reverse Proxy & SSL
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: snappy-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+      - ./client/build:/usr/share/nginx/html:ro
+      - nginx_logs:/var/log/nginx
+    networks:
+      - snappy-network
+    depends_on:
+      - backend
+      - frontend
+    environment:
+      DOMAIN_NAME: ${DOMAIN_NAME}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 🔐 SSL Certificate Management
+  certbot:
+    image: certbot/certbot:latest
+    container_name: snappy-certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    networks:
+      - snappy-network
+    command: certonly --webroot --webroot-path=/var/www/certbot --email ${SSL_EMAIL} --agree-tos --no-eff-email -d ${DOMAIN_NAME} -d www.${DOMAIN_NAME}
+    depends_on:
+      - nginx
+
+  # 📊 Monitoring - Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: snappy-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - snappy-network
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+
+  # 📈 Monitoring - Grafana
+  grafana:
+    image: grafana/grafana:latest
+    container_name: snappy-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    networks:
+      - snappy-network
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+  # 🔍 Log Management - Elasticsearch
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: snappy-elasticsearch
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+      xpack.security.enabled: false
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - snappy-network
+    ports:
+      - "9200:9200"
+
+  # 📋 Log Visualization - Kibana
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: snappy-kibana
+    restart: unless-stopped
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    networks:
+      - snappy-network
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+
+  # 🔄 Database Backup Service
+  db-backup:
+    build:
+      context: ./backup
+      dockerfile: Dockerfile
+    container_name: snappy-backup
+    restart: unless-stopped
+    environment:
+      MONGO_URI: mongodb://snappy-user:${MONGO_USER_PASSWORD}@mongodb:27017/snappy-ecommerce
+      S3_BUCKET: ${BACKUP_S3_BUCKET}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      BACKUP_SCHEDULE: "0 2 * * *" # Daily at 2 AM
+    volumes:
+      - ./backup/scripts:/app/scripts
+      - backup_data:/app/backups
+    networks:
+      - snappy-network
+    depends_on:
+      - mongodb
+
+# 🌐 Networks
+networks:
+  snappy-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+# 💾 Persistent Volumes
+volumes:
+  mongodb_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  elasticsearch_data:
+    driver: local
+  backup_data:
+    driver: local
+  nginx_logs:
+    driver: local

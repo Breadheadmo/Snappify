@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNotification } from '../contexts/NotificationContext';
 import { useWishlist } from '../contexts/WishlistContext';
 import { useCart } from '../contexts/CartContext';
 import { Heart, ShoppingCart, Trash2 } from 'lucide-react';
@@ -7,11 +8,13 @@ import { Link } from 'react-router-dom';
 const WishlistSection: React.FC = () => {
   const { state: wishlistState, removeFromWishlist } = useWishlist();
   const { addToCart } = useCart();
+  const { showNotification } = useNotification();
 
   const handleAddToCart = (productId: string | number) => {
     const product = wishlistState.items.find(item => String(item.id) === String(productId));
     if (product) {
       addToCart(product);
+      showNotification(`${product.name} added to cart!`, 'success');
     }
   };
 
@@ -27,7 +30,10 @@ const WishlistSection: React.FC = () => {
               >
                 <div className="absolute top-2 right-2 flex space-x-2">
                   <button
-                    onClick={() => removeFromWishlist(product.id)}
+                    onClick={() => {
+                      removeFromWishlist(product.id);
+                      showNotification(`${product.name} removed from wishlist.`, 'info');
+                    }}
                     className="bg-white rounded-full p-1.5 shadow hover:bg-red-50 transition-colors"
                     aria-label="Remove from wishlist"
                   >
@@ -77,7 +83,10 @@ const WishlistSection: React.FC = () => {
           
           <div className="flex justify-end">
             <button
-              onClick={() => wishlistState.items.forEach(product => addToCart(product))}
+              onClick={() => {
+                wishlistState.items.forEach(product => addToCart(product));
+                showNotification('All wishlist items added to cart!', 'success');
+              }}
               className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"
             >
               Add All to Cart

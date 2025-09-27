@@ -8,6 +8,14 @@ const userSchema = mongoose.Schema(
       required: true,
       unique: true,
     },
+    firstName: {
+      type: String,
+      default: '',
+    },
+    lastName: {
+      type: String,
+      default: '',
+    },
     email: {
       type: String,
       required: true,
@@ -44,8 +52,8 @@ const userSchema = mongoose.Schema(
       },
     ],
   // Add fields for password reset and email verification
-  resetToken: { type: String },
-  resetTokenExpires: { type: Date },
+  resetPasswordToken: { type: String },
+  resetPasswordExpire: { type: Date },
   emailVerificationToken: { type: String },
   emailVerified: { type: Boolean, default: false },
   },

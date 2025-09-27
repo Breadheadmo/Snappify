@@ -9,7 +9,7 @@ const RequestPasswordReset: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     setMessage('');
-    const res = await fetch('/api/auth/request-reset', {
+    const res = await fetch('/api/users/forgot-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email }),

@@ -17,6 +17,8 @@ import {
 
 export default function Signup() {
   const [fields, setFields] = useState({
+    firstName: createFieldState(),
+    lastName: createFieldState(),
     username: createFieldState(),
     email: createFieldState(),
     password: createFieldState(),
@@ -35,6 +37,14 @@ export default function Signup() {
     
     // Apply the appropriate validator
     switch (field) {
+      case 'firstName':
+        updatedFields.firstName = updateFieldState(fields.firstName, value, (val) => 
+          val.length > 0 ? null : 'First name is required');
+        break;
+      case 'lastName':
+        updatedFields.lastName = updateFieldState(fields.lastName, value, (val) => 
+          val.length > 0 ? null : 'Last name is required');
+        break;
       case 'username':
         updatedFields.username = updateFieldState(fields.username, value, validateUsername);
         break;
@@ -92,7 +102,13 @@ export default function Signup() {
     setIsLoading(true);
 
     try {
-      await register(fields.username.value, fields.email.value, fields.password.value);
+      await register(
+        fields.username.value, 
+        fields.email.value, 
+        fields.password.value, 
+        fields.firstName.value, 
+        fields.lastName.value
+      );
       navigate('/'); // Redirect to home page after successful registration
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to create account');
@@ -129,6 +145,30 @@ export default function Signup() {
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="rounded-md space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <FormInput
+                id="firstName"
+                label="First Name"
+                type="text"
+                placeholder="Enter your first name"
+                fieldState={fields.firstName}
+                onChange={(value) => updateField('firstName', value)}
+                autoComplete="given-name"
+                icon={<User className="h-5 w-5 text-gray-400" />}
+              />
+              
+              <FormInput
+                id="lastName"
+                label="Last Name"
+                type="text"
+                placeholder="Enter your last name"
+                fieldState={fields.lastName}
+                onChange={(value) => updateField('lastName', value)}
+                autoComplete="family-name"
+                icon={<User className="h-5 w-5 text-gray-400" />}
+              />
+            </div>
+            
             <FormInput
               id="username"
               label="Username"

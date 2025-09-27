@@ -1,27 +1,15 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { authApi } from '../services/api';
+import { User } from '../types/User';
 
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<{ user: User; token: string }>;
-  register: (username: string, email: string, password: string) => Promise<void>;
+  register: (username: string, email: string, password: string, firstName?: string, lastName?: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
   isAuthLoading: boolean;
-}
-
-interface User {
-  id: number;
-  username: string;
-  email: string;
-  profilePicture?: string;
-  isAdmin?: boolean;
-  settings?: {
-    notifications: boolean;
-    language: string;
-    currency: string;
-  };
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -72,9 +60,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (username: string, email: string, password: string) => {
+  const register = async (username: string, email: string, password: string, firstName?: string, lastName?: string) => {
     try {
-      await authApi.register(username, email, password);
+      await authApi.register(username, email, password, firstName, lastName);
       
       // After successful registration, log the user in automatically
       await login(email, password);

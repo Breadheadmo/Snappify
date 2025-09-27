@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNotification } from '../contexts/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { User as UserIcon, ShoppingBag, Heart, LogOut, Settings, Camera } from 'lucide-react';
@@ -8,13 +9,17 @@ import AccountSettingsForm from '../components/AccountSettingsForm';
 import WishlistSection from '../components/WishlistSection';
 import OrderSection from '../components/OrderSection';
 
+// API Configuration
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+
 export default function Profile() {
   const { user, logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [error, setError] = useState('');
+  // Remove legacy error state
+  const { showNotification } = useNotification();
   
   const [settings, setSettings] = useState({
     notifications: true,
@@ -29,9 +34,20 @@ export default function Profile() {
     }
   }, [isAuthenticated, navigate]);
 
-  const handleProfileUpdate = async (data: { username: string; email: string }) => {
+  const handleProfileUpdate = async (data: { 
+    username: string; 
+    email: string;
+    phoneNumber?: string;
+    defaultShippingAddress?: {
+      addressLine1: string;
+      addressLine2: string;
+      city: string;
+      postalCode: string;
+      country: string;
+    };
+  }) => {
     try {
-      const response = await fetch('http://localhost:5000/api/profile/update', {
+      const response = await fetch(`${API_BASE_URL}/profile/update`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -46,15 +62,16 @@ export default function Profile() {
       }
 
       setIsEditing(false);
+      showNotification('Profile updated successfully', 'success');
       // Reload user data or update context
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to update profile');
+      showNotification(error instanceof Error ? error.message : 'Failed to update profile', 'error');
     }
   };
 
   const handlePasswordChange = async (data: { currentPassword: string; newPassword: string }) => {
     try {
-      const response = await fetch('http://localhost:5000/api/profile/change-password', {
+      const response = await fetch(`${API_BASE_URL}/profile/change-password`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -68,14 +85,15 @@ export default function Profile() {
       }
 
       setIsChangingPassword(false);
+      showNotification('Password changed successfully', 'success');
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to change password');
+      showNotification(error instanceof Error ? error.message : 'Failed to change password', 'error');
     }
   };
 
   const handleSettingsUpdate = async (data: { notifications: boolean; language: string; currency: string }) => {
     try {
-      const response = await fetch('http://localhost:5000/api/profile/settings', {
+      const response = await fetch(`${API_BASE_URL}/profile/settings`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -89,8 +107,9 @@ export default function Profile() {
       }
 
       setSettings(data);
+      showNotification('Settings updated successfully', 'success');
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to update settings');
+      showNotification(error instanceof Error ? error.message : 'Failed to update settings', 'error');
     }
   };
 
@@ -102,7 +121,7 @@ export default function Profile() {
     formData.append('profilePicture', file);
 
     try {
-      const response = await fetch('http://localhost:5000/api/profile/upload-picture', {
+      const response = await fetch(`${API_BASE_URL}/profile/upload-picture`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -113,8 +132,9 @@ export default function Profile() {
       if (!response.ok) {
         throw new Error('Failed to upload profile picture');
       }
+      showNotification('Profile picture updated!', 'success');
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to upload profile picture');
+      showNotification(error instanceof Error ? error.message : 'Failed to upload profile picture', 'error');
     }
   };
 
@@ -175,11 +195,7 @@ export default function Profile() {
           {/* Main Content */}
           <div className="flex-1">
             <div className="bg-white rounded-lg shadow">
-              {error && (
-                <div className="p-4 bg-red-50 text-red-700 rounded-t-lg border-b border-red-100">
-                  {error}
-                </div>
-              )}
+
               {activeTab === 'profile' && (
                 <div className="p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-6">Profile Information</h3>
@@ -190,7 +206,7 @@ export default function Profile() {
                       <div className="h-32 w-32 rounded-full bg-primary-100 flex items-center justify-center mx-auto mb-4 overflow-hidden">
                         {user?.profilePicture ? (
                           <img 
-                            src={`http://localhost:5000${user.profilePicture}`}
+                            src={`${API_BASE_URL.replace('/api', '')}${user.profilePicture}`}
                             alt="Profile"
                             className="h-full w-full object-cover"
                           />

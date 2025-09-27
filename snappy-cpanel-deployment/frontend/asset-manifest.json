@@ -1,0 +1,16 @@
+{
+  "files": {
+    "main.css": "/static/css/main.0eb2abf4.css",
+    "main.js": "/static/js/main.6c7cd7c4.js",
+    "static/media/Audio.jpg": "/static/media/Audio.45e16916eae66a5a205e.jpg",
+    "static/media/Chargers.jpg": "/static/media/Chargers.057e1c74a830c08a5d9e.jpg",
+    "static/media/Logo.png": "/static/media/Logo.f000dd0a7206b38d1ba8.png",
+    "index.html": "/index.html",
+    "main.0eb2abf4.css.map": "/static/css/main.0eb2abf4.css.map",
+    "main.6c7cd7c4.js.map": "/static/js/main.6c7cd7c4.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.0eb2abf4.css",
+    "static/js/main.6c7cd7c4.js"
+  ]
+}

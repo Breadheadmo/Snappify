@@ -53,6 +53,11 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
     toggleWishlist(product);
   };
 
+  // Use first image from images array, fallback to placeholder
+  const mainImage = product.images && product.images.length > 0 && product.images[0]
+    ? product.images[0]
+    : 'https://via.placeholder.com/300x200?text=Product+Image';
+
   return (
     <div 
       ref={cardRef}
@@ -64,7 +69,7 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
     >
       <div className="relative overflow-hidden rounded-t-xl image-zoom">
         <img
-          src={product.image}
+          src={mainImage}
           alt={product.name}
           className={`w-full h-48 object-cover transition-all duration-500 ${
             imageLoaded ? 'image-loaded' : 'image-loading'

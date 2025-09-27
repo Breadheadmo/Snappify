@@ -18,11 +18,13 @@ const SearchFilters: React.FC = () => {
     // Fetch categories and brands from backend
     const fetchFilters = async () => {
       try {
+        const mod = await import('../services/api');
         const [catRes, brandRes] = await Promise.all([
-          fetch('/api/categories').then(res => res.json()),
-          await import('../services/api').then(mod => mod.productApi.getBrands())
+          mod.productApi.getCategories(),
+          mod.productApi.getBrands()
         ]);
-        setCategories(catRes.map((cat: any) => ({ _id: cat._id, name: cat.name })));
+        // Transform categories to the expected format
+        setCategories(catRes.map((cat: string) => ({ _id: cat, name: cat })));
         setBrands(brandRes);
       } catch (err) {
         setCategories([]);

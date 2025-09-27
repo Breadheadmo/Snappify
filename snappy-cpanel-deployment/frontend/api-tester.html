@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Snappy API Tester</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .token-input {
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Snappy API Tester</h1>
+    
+    <div class="test-section">
+        <h2>Auth Tests</h2>
+        <div>
+            <h3>Register User</h3>
+            <input type="text" id="register-username" placeholder="Username" value="testuser3">
+            <input type="email" id="register-email" placeholder="Email" value="test3@example.com">
+            <input type="password" id="register-password" placeholder="Password" value="password123">
+            <button onclick="registerUser()">Register</button>
+            <pre id="register-result"></pre>
+        </div>
+        
+        <div>
+            <h3>Login</h3>
+            <input type="email" id="login-email" placeholder="Email" value="test3@example.com">
+            <input type="password" id="login-password" placeholder="Password" value="password123">
+            <button onclick="login()">Login</button>
+            <pre id="login-result"></pre>
+        </div>
+        
+        <div>
+            <h3>Get User Profile</h3>
+            <input type="text" id="auth-token" placeholder="JWT Token" class="token-input">
+            <button onclick="getUserProfile()">Get Profile</button>
+            <pre id="profile-result"></pre>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Product Tests</h2>
+        <div>
+            <h3>Get All Products</h3>
+            <button onclick="getProducts()">Get Products</button>
+            <pre id="products-result"></pre>
+        </div>
+        
+        <div>
+            <h3>Get Product by ID</h3>
+            <input type="text" id="product-id" placeholder="Product ID">
+            <button onclick="getProductById()">Get Product</button>
+            <pre id="product-result"></pre>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Wishlist Tests</h2>
+        <div>
+            <h3>Add to Wishlist</h3>
+            <input type="text" id="wishlist-product-id" placeholder="Product ID">
+            <button onclick="addToWishlist()">Add to Wishlist</button>
+            <pre id="add-wishlist-result"></pre>
+        </div>
+        
+        <div>
+            <h3>Get Wishlist</h3>
+            <button onclick="getWishlist()">Get Wishlist</button>
+            <pre id="wishlist-result"></pre>
+        </div>
+        
+        <div>
+            <h3>Remove from Wishlist</h3>
+            <input type="text" id="remove-wishlist-product-id" placeholder="Product ID">
+            <button onclick="removeFromWishlist()">Remove from Wishlist</button>
+            <pre id="remove-wishlist-result"></pre>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Cart Tests</h2>
+        <div>
+            <h3>Add to Cart</h3>
+            <input type="text" id="cart-product-id" placeholder="Product ID">
+            <input type="number" id="cart-quantity" placeholder="Quantity" value="1">
+            <button onclick="addToCart()">Add to Cart</button>
+            <pre id="add-cart-result"></pre>
+        </div>
+        
+        <div>
+            <h3>Get Cart</h3>
+            <button onclick="getCart()">Get Cart</button>
+            <pre id="cart-result"></pre>
+        </div>
+        
+        <div>
+            <h3>Update Cart Item</h3>
+            <input type="text" id="update-cart-product-id" placeholder="Product ID">
+            <input type="number" id="update-cart-quantity" placeholder="New Quantity" value="2">
+            <button onclick="updateCartItem()">Update Cart Item</button>
+            <pre id="update-cart-result"></pre>
+        </div>
+        
+        <div>
+            <h3>Remove from Cart</h3>
+            <input type="text" id="remove-cart-product-id" placeholder="Product ID">
+            <button onclick="removeFromCart()">Remove from Cart</button>
+            <pre id="remove-cart-result"></pre>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Order Tests</h2>
+        <div>
+            <h3>Create Order</h3>
+            <textarea id="shipping-details" placeholder="Shipping Details (JSON)" rows="5">{"address":"123 Test St","city":"Test City","postalCode":"12345","country":"Test Country"}</textarea>
+            <textarea id="payment-details" placeholder="Payment Details (JSON)" rows="3">{"method":"PayPal","id":"test123"}</textarea>
+            <button onclick="createOrder()">Create Order</button>
+            <pre id="create-order-result"></pre>
+        </div>
+        
+        <div>
+            <h3>Get Orders</h3>
+            <button onclick="getOrders()">Get Orders</button>
+            <pre id="orders-result"></pre>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:5000/api';
+        let authToken = '';
+        
+        // Helper function to format JSON response
+        function formatResponse(data) {
+            return typeof data === 'object' ? JSON.stringify(data, null, 2) : data;
+        }
+        
+        // Helper function to get auth headers
+        function getAuthHeaders() {
+            const token = document.getElementById('auth-token').value || authToken;
+            return {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            };
+        }
+        
+        // Auth functions
+        async function registerUser() {
+            const username = document.getElementById('register-username').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/users`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password })
+                });
+                
+                const data = await response.json();
+                document.getElementById('register-result').textContent = formatResponse(data);
+            } catch (error) {
+                document.getElementById('register-result').textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        async function login() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/users/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                document.getElementById('login-result').textContent = formatResponse(data);
+                
+                if (data.token) {
+                    authToken = data.token;
+                    document.getElementById('auth-token').value = authToken;
+                }
+            } catch (error) {
+                document.getElementById('login-result').textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        async function getUserProfile() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/users/profile`, {
+                    headers: getAuthHeaders()
+                });
+                
+                const data = await response.json();
+                document.getElementById('profile-result').textContent = formatResponse(data);
+            } catch (error) {
+                document.getElementById('profile-result').textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        // Product functions
+        async function getProducts() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/products`);
+                const data = await response.json();
+                document.getElementById('products-result').textContent = formatResponse(data);
+            } catch (error) {
+                document.getElementById('products-result').textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        async function getProductById() {
+            const productId = document.getElementById('product-id').value;
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/products/${productId}`);
+                const data = await response.json();
+                document.getElementById('product-result').textContent = formatResponse(data);
+            } catch (error) {
+                document.getElementById('product-result').textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        // Wishlist functions
+        async function addToWishlist() {
+            const productId = document.getElementById('wishlist-product-id').value;
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/users/wishlist`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ productId })
+                });
+                
+                const data = await response.json();
+                document.getElementById('add-wishlist-result').textContent = formatResponse(data);
+            } catch (error) {
+                document.getElementById('add-wishlist-result').textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        async function getWishlist() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/users/wishlist`, {
+                    headers: getAuthHeaders()
+                });
+                
+                const data = await response.json();
+                document.getElementById('wishlist-result').textContent = formatResponse(data);
+            } catch (error) {
+                document.getElementById('wishlist-result').textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        async function removeFromWishlist() {
+            const productId = document.getElementById('remove-wishlist-product-id').value;
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/users/wishlist/${productId}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+                
+                const data = await response.json();
+                document.getElementById('remove-wishlist-result').textContent = formatResponse(data);
+            } catch (error) {
+                document.getElementById('remove-wishlist-result').textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        // Cart functions
+        async function addToCart() {
+            const productId = document.getElementById('cart-product-id').value;
+            const quantity = document.getElementById('cart-quantity').value;
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/cart/items`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ productId, quantity: parseInt(quantity) })
+                });
+                
+                const data = await response.json();
+                document.getElementById('add-cart-result').textContent = formatResponse(data);
+            } catch (error) {
+                document.getElementById('add-cart-result').textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        async function getCart() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/cart/items`, {
+                    headers: getAuthHeaders()
+                });
+                
+                const data = await response.json();
+                document.getElementById('cart-result').textContent = formatResponse(data);
+            } catch (error) {
+                document.getElementById('cart-result').textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        async function updateCartItem() {
+            const productId = document.getElementById('update-cart-product-id').value;
+            const quantity = document.getElementById('update-cart-quantity').value;
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/cart/items/${productId}`, {
+                    method: 'PUT',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ quantity: parseInt(quantity) })
+                });
+                
+                const data = await response.json();
+                document.getElementById('update-cart-result').textContent = formatResponse(data);
+            } catch (error) {
+                document.getElementById('update-cart-result').textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        async function removeFromCart() {
+            const productId = document.getElementById('remove-cart-product-id').value;
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/cart/items/${productId}`, {
+                    method: 'DELETE',
+                    headers: getAuthHeaders()
+                });
+                
+                const data = await response.json();
+                document.getElementById('remove-cart-result').textContent = formatResponse(data);
+            } catch (error) {
+                document.getElementById('remove-cart-result').textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        // Order functions
+        async function createOrder() {
+            const shippingDetails = JSON.parse(document.getElementById('shipping-details').value);
+            const paymentDetails = JSON.parse(document.getElementById('payment-details').value);
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/orders/checkout`, {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ shippingDetails, paymentDetails })
+                });
+                
+                const data = await response.json();
+                document.getElementById('create-order-result').textContent = formatResponse(data);
+            } catch (error) {
+                document.getElementById('create-order-result').textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        async function getOrders() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/orders`, {
+                    headers: getAuthHeaders()
+                });
+                
+                const data = await response.json();
+                document.getElementById('orders-result').textContent = formatResponse(data);
+            } catch (error) {
+                document.getElementById('orders-result').textContent = `Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>

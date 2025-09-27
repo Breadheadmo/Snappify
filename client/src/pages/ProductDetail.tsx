@@ -1,4 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "../components/ui/carousel";
+import { Card, CardContent } from "../components/ui/card";
 import { useAuth } from '../contexts/AuthContext';
 import { useParams, Link } from 'react-router-dom';
 import { productApi, reviewApi } from '../services/api';
@@ -15,6 +23,15 @@ interface Review {
 }
 
 const ProductDetail: React.FC = () => {
+  // Carousel state
+  const [currentImageIdx, setCurrentImageIdx] = useState(0);
+  // Remove duplicate images declaration; use images from product below
+  const handlePrevImage = () => {
+    setCurrentImageIdx(idx => (images.length > 0 ? (idx === 0 ? images.length - 1 : idx - 1) : 0));
+  };
+  const handleNextImage = () => {
+    setCurrentImageIdx(idx => (images.length > 0 ? (idx === images.length - 1 ? 0 : idx + 1) : 0));
+  };
   const { user } = useAuth();
   const { id } = useParams();
   const [product, setProduct] = useState<Product | null>(null);
@@ -22,6 +39,7 @@ const ProductDetail: React.FC = () => {
   const [error, setError] = useState('');
   const [quantity, setQuantity] = useState<number>(1);
   const [userRating, setUserRating] = useState<number | null>(null);
+  const [comment, setComment] = useState<string>("");
   const [ratingSubmitting, setRatingSubmitting] = useState(false);
   const [ratingError, setRatingError] = useState<string | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -136,15 +154,32 @@ const ProductDetail: React.FC = () => {
     );
   }
 
+  // Images array for carousel
+  const images = product.images && product.images.length > 0
+    ? product.images
+    : [product.image || 'https://via.placeholder.com/400x300?text=Product+Image'];
+
   return (
     <div className="min-h-screen bg-gray-50 py-10">
       <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8 flex flex-col md:flex-row gap-8">
         <div className="flex-1 flex flex-col items-center justify-center">
-          <img
-            src={product.image || (product.images && product.images[0]) || 'https://via.placeholder.com/400x300?text=Product+Image'}
-            alt={product.name}
-            className="w-full max-w-xs h-auto rounded-lg mb-4 object-cover"
-          />
+          <Carousel className="w-full max-w-xs">
+            <CarouselContent>
+              {images.map((img, idx) => (
+                <CarouselItem key={idx}>
+                  <div className="p-1">
+                    <Card>
+                      <CardContent className="flex aspect-square items-center justify-center p-6">
+                        <img src={img} alt={product.name} className="object-cover w-full h-full rounded-lg" />
+                      </CardContent>
+                    </Card>
+                  </div>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <CarouselPrevious />
+            <CarouselNext />
+          </Carousel>
           {!product.inStock && (
             <span className="px-3 py-1 bg-red-500 text-white rounded-full text-xs font-medium">Out of Stock</span>
           )}
@@ -226,6 +261,74 @@ const ProductDetail: React.FC = () => {
       {/* User Reviews Section */}
       <div className="max-w-4xl mx-auto mt-8 bg-white rounded-lg shadow-lg p-8">
         <h2 className="text-2xl font-bold mb-4">User Reviews</h2>
+        {/* Review Submission Form */}
+        {user ? (
+          <form
+            className="mb-8"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!product) return;
+              if (!userRating || userRating < 1 || userRating > 5) {
+                setRatingError('Please select a star rating.');
+                return;
+              }
+              if (!comment.trim()) {
+                setRatingError('Please enter a comment.');
+                return;
+              }
+              setRatingSubmitting(true);
+              setRatingError(null);
+              try {
+                const productIdStr = String(product._id || product.id);
+                await reviewApi.addReview(productIdStr, userRating, comment);
+                setUserRating(null);
+                setComment('');
+                // Refetch reviews
+                const productIdNum = typeof product.id === 'number' ? product.id : Number(product.id || product._id);
+                const data = await reviewApi.getProductReviews(productIdNum);
+                setReviews(data);
+              } catch (err: any) {
+                setRatingError(err.message || 'Failed to submit review.');
+              } finally {
+                setRatingSubmitting(false);
+              }
+            }}
+          >
+            <div className="mb-2 flex items-center gap-2">
+              <span className="font-medium">Your Rating:</span>
+              {[...Array(5)].map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setUserRating(i + 1)}
+                  className="focus:outline-none"
+                  aria-label={`Rate ${i + 1} stars`}
+                >
+                  <Star className={`h-5 w-5 ${userRating !== null ? i < userRating : false ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
+                </button>
+              ))}
+            </div>
+            <textarea
+              className="w-full border rounded p-2 mb-2"
+              rows={3}
+              placeholder="Write your review..."
+              value={comment}
+              onChange={e => setComment(e.target.value)}
+              required
+            />
+            {ratingError && <div className="text-red-500 mb-2">{ratingError}</div>}
+            <button
+              type="submit"
+              className="bg-primary-600 text-white px-4 py-2 rounded hover:bg-primary-700 disabled:opacity-50"
+              disabled={ratingSubmitting}
+            >
+              {ratingSubmitting ? 'Submitting...' : 'Submit Review'}
+            </button>
+          </form>
+        ) : (
+          <div className="mb-8 text-gray-500">Log in to submit a review.</div>
+        )}
+        {/* Reviews List */}
         {reviewsLoading ? (
           <div>Loading reviews...</div>
         ) : reviews.length === 0 ? (

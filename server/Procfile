@@ -1,0 +1,6 @@
+# Railway Deployment Configuration
+PORT=$PORT
+NODE_ENV=production
+
+# This file tells Railway how to start your app
+web: node server.js

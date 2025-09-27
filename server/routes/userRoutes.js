@@ -12,12 +12,18 @@ const {
   deleteUser,
   getUserById,
   updateUser,
+  requestPasswordReset,
+  resetPassword,
 } = require('../controllers/userController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
 // Public routes
 router.post('/login', authUser);
 router.post('/', registerUser);
+router.post('/forgot-password', requestPasswordReset);
+router.post('/reset-password/:token', resetPassword);
+router.post('/forgot-password', requestPasswordReset);
+router.post('/reset-password/:token', resetPassword);
 
 // Private routes
 router.route('/profile')

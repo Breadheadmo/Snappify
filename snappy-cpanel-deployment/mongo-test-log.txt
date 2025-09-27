@@ -1,0 +1,12 @@
+[2025-08-19T19:44:49.136Z] Starting MongoDB test script...
+[2025-08-19T19:44:49.147Z] Loaded environment variables
+[2025-08-19T19:44:49.148Z] MONGO_URI: Found
+[2025-08-19T19:44:49.806Z] MongoDB connected successfully
+[2025-08-19T19:44:50.100Z] Test document created:
+[2025-08-19T19:44:50.103Z] {
+  "name": "Test Item",
+  "_id": "68a4d431b801d3af90a3f60d",
+  "date": "2025-08-19T19:44:49.850Z",
+  "__v": 0
+}
+[2025-08-19T19:44:50.105Z] MongoDB test completed successfully

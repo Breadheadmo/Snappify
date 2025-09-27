@@ -7,6 +7,7 @@ import Products from './pages/Products';
 import ProductDetail from './pages/ProductDetail';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
+import OrderTracking from './pages/OrderTracking';
 import { useEffect, useState } from 'react';
 import { CartProvider } from './contexts/CartContext';
 import { WishlistProvider } from './contexts/WishlistContext';
@@ -60,6 +61,7 @@ function App() {
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/orders" element={<OrderHistory />} />
                     <Route path="/orders/:orderId" element={<OrderDetails />} />
+                    <Route path="/track/:trackingNumber" element={<OrderTracking />} />
                     {/* Admin Routes */}
                     <Route path="/admin" element={<AdminDashboard />} />
                     <Route path="/admin/products" element={<AdminProducts />} />

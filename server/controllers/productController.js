@@ -21,9 +21,24 @@ const getProducts = asyncHandler(async (req, res) => {
     ];
   }
   
-  // Filter by category
+  // Filter by category (handle both main categories and subcategories)
   if (req.query.category && req.query.category !== 'all') {
-    filter.category = req.query.category;
+    const categoryMapping = {
+      'Power & Charging': ['Power Banks', 'Wall Chargers', 'Wireless Chargers', 'Car Chargers', 'Charging Cables'],
+      'Audio & Sound': ['Earphones & AirPods', 'Headphones & Headsets', 'Bluetooth Speakers'],
+      'Phone Protection': ['Screen Protectors', 'Phone Covers & Cases'],
+      'Storage & Connectivity': ['Flash Drives', 'Memory Cards', 'OTG & Adapters']
+    };
+    
+    const requestedCategory = req.query.category;
+    
+    // Check if it's a main category that maps to subcategories
+    if (categoryMapping[requestedCategory]) {
+      filter.category = { $in: categoryMapping[requestedCategory] };
+    } else {
+      // It's either a subcategory or direct category match
+      filter.category = requestedCategory;
+    }
   }
   
   // Filter by brand
@@ -89,11 +104,10 @@ const getProductById = asyncHandler(async (req, res) => {
  * @access  Private/Admin
  */
 const createProduct = asyncHandler(async (req, res) => {
-  const {
+  let {
     name,
     price,
     description,
-    images,
     brand,
     category,
     countInStock,
@@ -105,6 +119,15 @@ const createProduct = asyncHandler(async (req, res) => {
     warranty,
     originalPrice,
   } = req.body;
+
+  // Parse specifications if sent as JSON string
+  if (typeof specifications === 'string') {
+    try {
+      specifications = JSON.parse(specifications);
+    } catch (err) {
+      specifications = {};
+    }
+  }
 
   // Backend validation
   if (!category || typeof category !== 'string' || !category.trim()) {
@@ -120,11 +143,27 @@ const createProduct = asyncHandler(async (req, res) => {
     throw new Error('Valid price is required');
   }
 
+  // Handle uploaded images
+  let imagePaths = [];
+  if (req.files && req.files.length > 0) {
+    imagePaths = req.files.map(file => '/uploads/product-images/' + file.filename);
+  }
+  // If no files, fallback to images from body or placeholder
+  else if (req.body.images) {
+    if (Array.isArray(req.body.images)) {
+      imagePaths = req.body.images;
+    } else if (typeof req.body.images === 'string') {
+      imagePaths = [req.body.images];
+    }
+  } else {
+    imagePaths = ['https://via.placeholder.com/650x650'];
+  }
+
   const product = new Product({
     name,
     price,
     description,
-    images: images || ['https://via.placeholder.com/650x650'],
+    images: imagePaths,
     brand,
     category,
     countInStock,
@@ -149,11 +188,10 @@ const createProduct = asyncHandler(async (req, res) => {
  * @access  Private/Admin
  */
 const updateProduct = asyncHandler(async (req, res) => {
-  const {
+  let {
     name,
     price,
     description,
-    images,
     brand,
     category,
     countInStock,
@@ -166,6 +204,15 @@ const updateProduct = asyncHandler(async (req, res) => {
     originalPrice,
     relatedProducts,
   } = req.body;
+
+  // Parse specifications if sent as JSON string
+  if (typeof specifications === 'string') {
+    try {
+      specifications = JSON.parse(specifications);
+    } catch (err) {
+      specifications = {};
+    }
+  }
 
   const product = await Product.findById(req.params.id);
 
@@ -183,11 +230,23 @@ const updateProduct = asyncHandler(async (req, res) => {
     throw new Error('Valid price is required');
   }
 
+  // Handle uploaded images
+  let imagePaths = product.images;
+  if (req.files && req.files.length > 0) {
+    imagePaths = req.files.map(file => '/uploads/product-images/' + file.filename);
+  } else if (req.body.images) {
+    if (Array.isArray(req.body.images)) {
+      imagePaths = req.body.images;
+    } else if (typeof req.body.images === 'string') {
+      imagePaths = [req.body.images];
+    }
+  }
+
   if (product) {
     product.name = name || product.name;
     product.price = price !== undefined ? price : product.price;
     product.description = description || product.description;
-    product.images = images || product.images;
+    product.images = imagePaths;
     product.brand = brand || product.brand;
     product.category = category || product.category;
     product.countInStock = countInStock !== undefined ? countInStock : product.countInStock;
@@ -300,8 +359,43 @@ const getProductCategories = asyncHandler(async (req, res) => {
  * @access  Public
  */
 const getProductBrands = asyncHandler(async (req, res) => {
-  const brands = await Product.distinct('brand');
-  res.json(brands);
+  // Get brands from existing products
+  const existingBrands = await Product.distinct('brand');
+  
+  // Popular phone accessory brands
+  const popularBrands = [
+    // Major Tech Brands
+    'Apple', 'Samsung', 'Huawei', 'Xiaomi', 'OnePlus', 'Google', 'Sony', 'LG',
+    
+    // Audio Brands
+    'Bose', 'JBL', 'Beats', 'Sennheiser', 'Audio-Technica', 'Skullcandy', 
+    'Jabra', 'Plantronics', 'AKG', 'Marshall', 'Harman Kardon',
+    
+    // Charging & Power Brands
+    'Anker', 'Belkin', 'RAVPower', 'Aukey', 'Mophie', 'Poweradd',
+    'Baseus', 'Ugreen', 'Choetech', 'Spigen',
+    
+    // Protection & Cases
+    'OtterBox', 'UAG', 'Case-Mate', 'Incipio', 'Tech21', 'Pelican', 
+    'LifeProof', 'Catalyst', 'Peak Design', 'Nomad', 'Bellroy',
+    
+    // Screen Protection
+    'ZAGG', 'amFilm', 'IQ Shield', 'ArmorSuit', 'Tech Armor', 'Maxboost', 'JETech',
+    
+    // Storage & Connectivity
+    'SanDisk', 'Kingston', 'Lexar', 'Transcend', 'PNY', 'Corsair', 'ADATA',
+    
+    // Popular Budget Brands
+    'Essager', 'INIU', 'Syncwire', 'Ailun', 'Mpow', 'TaoTronics', 'Bovon',
+    
+    // Local/Regional Brands
+    'Volkano', 'Gizzu', 'Mecer', 'Proline', 'Laser', 'Digitech'
+  ];
+  
+  // Combine existing brands with popular brands and remove duplicates
+  const allBrands = [...new Set([...existingBrands, ...popularBrands])].sort();
+  
+  res.json(allBrands);
 });
 
 module.exports = {

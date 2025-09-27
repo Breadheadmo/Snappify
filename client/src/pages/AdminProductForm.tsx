@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import ErrorMessage from '../components/ErrorMessage';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { useAuth } from '../contexts/AuthContext';
 import { Navigate, useNavigate, useParams, Link } from 'react-router-dom';
 
@@ -20,10 +22,13 @@ interface ProductFormData {
 }
 
 const AdminProductForm: React.FC = () => {
+  // State for selected image files
   const { user, isAuthenticated, isAuthLoading } = useAuth();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEditMode = Boolean(id);
+  // State for selected image files
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   const [formData, setFormData] = useState<ProductFormData>({
     name: '',
@@ -46,6 +51,8 @@ const AdminProductForm: React.FC = () => {
   const [brands, setBrands] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [formSuccess, setFormSuccess] = useState('');
   const [specKey, setSpecKey] = useState('');
   const [specValue, setSpecValue] = useState('');
 
@@ -150,22 +157,28 @@ const AdminProductForm: React.FC = () => {
       return;
     }
 
-    // Ensure images is a non-empty array of strings
-    const images = formData.images.filter(img => img.trim() !== '');
-    if (images.length === 0) {
-      images.push('https://via.placeholder.com/650x650');
-    }
+    // Prepare FormData for file upload
+    const form = new FormData();
+    form.append('name', formData.name);
+    form.append('price', String(formData.price));
+    form.append('originalPrice', String(formData.originalPrice));
+    form.append('description', formData.description);
+    form.append('brand', formData.brand);
+    form.append('category', formData.category);
+    form.append('countInStock', String(formData.countInStock));
+    form.append('weight', formData.weight);
+    form.append('dimensions', formData.dimensions);
+    form.append('warranty', formData.warranty);
+    form.append('features', JSON.stringify(formData.features.filter(f => f.trim() !== '')));
+    form.append('tags', JSON.stringify(formData.tags.filter(t => t.trim() !== '')));
+    form.append('specifications', JSON.stringify(formData.specifications));
 
-    // Clean up data before sending
-    const cleanedData = {
-      ...formData,
-      images: images,
-      features: formData.features.filter(f => f.trim() !== ''),
-      tags: formData.tags.filter(t => t.trim() !== ''),
-      price: Number(formData.price),
-      originalPrice: Number(formData.originalPrice),
-      countInStock: Number(formData.countInStock),
-    };
+    // Append image files (as array)
+    if (selectedFiles.length > 0) {
+      selectedFiles.forEach((file) => {
+        form.append('images[]', file);
+      });
+    }
 
     const url = isEditMode ? `/api/products/${id}` : '/api/products';
     const method = isEditMode ? 'PUT' : 'POST';
@@ -175,10 +188,9 @@ const AdminProductForm: React.FC = () => {
       const response = await fetch(url, {
         method,
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(cleanedData)
+        body: form
       });
 
       if (response.ok) {
@@ -270,6 +282,13 @@ const AdminProductForm: React.FC = () => {
         </div>
       </div>
 
+      {/* Error/Success Messages */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+        {formError && <ErrorMessage message={formError} className="mb-4" />}
+        {formSuccess && <div className="mb-4 text-green-600 font-semibold">{formSuccess}</div>}
+        {submitLoading && <LoadingSpinner />}
+      </div>
+
       {/* Form */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <form onSubmit={handleSubmit} className="space-y-8">
@@ -293,17 +312,25 @@ const AdminProductForm: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Brand *
                 </label>
-                <select
-                  value={formData.brand}
-                  onChange={(e) => setFormData(prev => ({ ...prev, brand: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  <option value="">Select Brand</option>
-                  {brands.map(brand => (
-                    <option key={brand} value={brand}>{brand}</option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <input
+                    type="text"
+                    list="brands-list"
+                    value={formData.brand}
+                    onChange={(e) => setFormData(prev => ({ ...prev, brand: e.target.value }))}
+                    placeholder="Type or select a brand"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                  <datalist id="brands-list">
+                    {brands.map(brand => (
+                      <option key={brand} value={brand} />
+                    ))}
+                  </datalist>
+                </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  Type a new brand name or select from existing brands
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -386,33 +413,46 @@ const AdminProductForm: React.FC = () => {
           {/* Images */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Product Images</h3>
-            {formData.images.map((image, index) => (
-              <div key={index} className="flex items-center space-x-2 mb-3">
-                <input
-                  type="url"
-                  placeholder="Image URL"
-                  value={image}
-                  onChange={(e) => handleArrayChange('images', index, e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                {formData.images.length > 1 && (
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={e => {
+                const files = Array.from(e.target.files || []);
+                if (files.length === 0) return;
+                setSelectedFiles(prev => [...prev, ...files]);
+                setFormData(prev => ({
+                  ...prev,
+                  images: [...prev.images, ...files.map(file => URL.createObjectURL(file))]
+                }));
+              }}
+              className="mb-4"
+            />
+            {/* Preview selected images */}
+            <div className="flex flex-wrap gap-4">
+              {selectedFiles && selectedFiles.length > 0 && selectedFiles.map((file: File, idx: number) => (
+                <div key={idx} className="relative w-24 h-24 border rounded overflow-hidden">
+                  <img
+                    src={URL.createObjectURL(file)}
+                    alt={file.name}
+                    className="object-cover w-full h-full"
+                  />
                   <button
                     type="button"
-                    onClick={() => removeArrayItem('images', index)}
-                    className="px-3 py-2 bg-red-100 text-red-600 rounded-md hover:bg-red-200"
+                    onClick={() => {
+                      setSelectedFiles((prev: File[]) => prev.filter((_, i) => i !== idx));
+                      setFormData(prev => ({
+                        ...prev,
+                        images: prev.images.filter((_, i) => i !== idx)
+                      }));
+                    }}
+                    className="absolute top-1 right-1 bg-red-500 text-white rounded px-1 text-xs"
                   >
-                    Remove
+                    ×
                   </button>
-                )}
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={() => addArrayItem('images')}
-              className="mt-2 px-4 py-2 bg-blue-100 text-blue-600 rounded-md hover:bg-blue-200"
-            >
-              Add Image
-            </button>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Features */}

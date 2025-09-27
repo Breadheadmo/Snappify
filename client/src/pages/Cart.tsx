@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNotification } from '../contexts/NotificationContext';
 import { Link } from 'react-router-dom';
 import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, CreditCard, Truck, Shield } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
@@ -6,24 +7,54 @@ import { useCart } from '../contexts/CartContext';
 
 const Cart: React.FC = () => {
   const { state, removeFromCart, updateQuantity, clearCart } = useCart();
+  const { showNotification } = useNotification();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
   const navigate = require('react-router-dom').useNavigate();
+
+  useEffect(() => {
+    // Fetch related products for all items in the cart
+    const fetchRelated = async () => {
+      try {
+        const allRelated = [];
+        for (const item of state.items) {
+          const res = await fetch(`/api/products/${item.product.id}`);
+          if (res.ok) {
+            const product = await res.json();
+            if (product.relatedProducts && product.relatedProducts.length > 0) {
+              allRelated.push(...product.relatedProducts);
+            }
+          }
+        }
+        // Remove duplicates by _id
+        const uniqueRelated = Array.from(new Map(allRelated.map(p => [p._id, p])).values());
+        setRelatedProducts(uniqueRelated);
+      } catch (err) {
+        setRelatedProducts([]);
+      }
+    };
+    if (state.items.length > 0) fetchRelated();
+    else setRelatedProducts([]);
+  }, [state.items]);
 
   const handleQuantityChange = async (productId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
       await removeFromCart(productId);
+      showNotification('Item removed from cart.', 'info');
     } else {
       await updateQuantity(productId, newQuantity);
+      showNotification('Cart updated.', 'success');
     }
   };
 
   const handleRemoveItem = async (productId: string) => {
     await removeFromCart(productId);
+    showNotification('Item removed from cart.', 'info');
   };
 
   const handleCheckout = () => {
     setIsCheckingOut(true);
-    // Simulate loading before redirecting
+    showNotification('Proceeding to checkout...', 'info');
     setTimeout(() => {
       navigate('/checkout');
     }, 1000);
@@ -247,7 +278,20 @@ const Cart: React.FC = () => {
         <div className="mt-16">
           <h2 className="text-2xl font-bold text-gray-900 mb-8">You might also like</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* TODO: Replace with backend API products or recommended products */}
+            {relatedProducts.length === 0 ? (
+              <div className="text-gray-500 col-span-4">No related products found.</div>
+            ) : (
+              relatedProducts.map(product => (
+                <div key={product._id} className="bg-white rounded-lg shadow-sm border p-4 flex flex-col items-center">
+                  <img src={product.images?.[0] || 'https://via.placeholder.com/120x120?text=Product'} alt={product.name} className="w-24 h-24 object-cover rounded mb-2" />
+                  <div className="font-semibold text-gray-900 mb-1 text-center">{product.name}</div>
+                  <div className="text-sm text-gray-600 mb-1">R{product.price}</div>
+                  <div className="flex gap-2 mt-2">
+                    <Link to={`/products/${product._id}`} className="text-primary-600 hover:text-primary-700 text-sm">View</Link>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

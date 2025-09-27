@@ -11,12 +11,13 @@ const {
   getProductCategories,
   getProductBrands,
 } = require('../controllers/productController');
+const upload = require('../middleware/uploadMiddleware');
 const { protect, admin } = require('../middleware/authMiddleware');
 
 // Public routes
 router.route('/')
   .get(getProducts)
-  .post(protect, admin, createProduct);
+  .post(protect, admin, upload.array('images[]', 10), createProduct);
 
 router.get('/top', getTopProducts);
 router.get('/categories', getProductCategories);
@@ -24,7 +25,7 @@ router.get('/brands', getProductBrands);
 
 router.route('/:id')
   .get(getProductById)
-  .put(protect, admin, updateProduct)
+  .put(protect, admin, upload.array('images[]', 10), updateProduct)
   .delete(protect, admin, deleteProduct);
 
 router.route('/:id/reviews')

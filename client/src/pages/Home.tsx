@@ -5,6 +5,8 @@ import ProductCard from '../components/ProductCard';
 import type { Product } from '../types/Product';
 import { useCart } from '../contexts/CartContext';
 import { productApi } from '../services/api';
+import ChargersImage from '../assets/images/Chargers.jpg';
+import AudioImage from '../assets/images/Audio.jpg';
 
 const Home: React.FC = () => {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
@@ -35,12 +37,15 @@ const Home: React.FC = () => {
 
   const handleAddToCart = async (product: Product) => {
     try {
-      console.log('Adding product to cart:', product);
+      console.log('🛒 Home: Adding product to cart:', product.name, product.id);
       await addToCart(product);
-      console.log(`Added ${product.name} to cart successfully`);
+      console.log(`✅ Home: Successfully added ${product.name} to cart`);
+      
+      // Show success message (you can replace with a toast notification)
+      // alert(`✅ ${product.name} added to cart!`);
     } catch (error) {
-      console.error('Failed to add product to cart:', error);
-      alert('Failed to add product to cart. Please try again.');
+      console.error('❌ Home: Failed to add product to cart:', error);
+      alert(`❌ Failed to add ${product.name} to cart. Please try again.`);
     }
   };
 
@@ -65,13 +70,13 @@ const Home: React.FC = () => {
   const categories = [
     {
       name: "Chargers",
-      image: "https://via.placeholder.com/300x200?text=Chargers",
+      image: ChargersImage,
       description: "Fast charging solutions for all devices",
       link: "/products?category=Chargers"
     },
     {
       name: "Audio",
-      image: "https://via.placeholder.com/300x200?text=Audio",
+      image: AudioImage,
       description: "Premium sound quality headphones and speakers",
       link: "/products?category=Audio"
     }

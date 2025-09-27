@@ -7,6 +7,7 @@ require('./utils/polyfill');
 const connectDB = require('./config/db');
 const path = require('path');
 const { errorHandler } = require('./middleware/errorMiddleware');
+const { securityMiddleware, generalLimiter, authLimiter, apiLimiter } = require('./middleware/securityMiddleware');
 
 // Load environment variables
 dotenv.config();
@@ -15,6 +16,22 @@ dotenv.config();
 connectDB();
 
 const app = express();
+// Serve uploads directory as static files
+app.use('/uploads/product-images', express.static(path.join(__dirname, 'uploads/product-images')));
+
+// Trust proxy settings for production (when behind reverse proxy/load balancer)
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1); // Trust first proxy
+} else {
+  // In development, don't trust proxies to avoid X-Forwarded-For issues
+  app.set('trust proxy', false);
+}
+
+// Security middleware
+app.use(securityMiddleware);
+
+// General rate limiting
+app.use(generalLimiter);
 
 // Middleware
 app.use(cors({
@@ -23,15 +40,21 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Logging middleware in development
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-// Routes
-app.use('/api/auth', require('./routes/authRoutes'));
+// Routes with specific rate limiting
+app.use('/api/auth', authLimiter, require('./routes/authRoutes'));
+app.use('/api/users/login', authLimiter);
+app.use('/api/users', authLimiter);
+
+// API routes with general rate limiting
+app.use('/api', apiLimiter);
 app.use('/api/images', require('./routes/imageRoutes'));
 app.use('/api/products', require('./routes/productRoutes'));
 app.use('/api/inventory', require('./routes/inventoryRoutes'));
@@ -43,6 +66,10 @@ app.use('/api/wishlist', require('./routes/wishlistRoutes'));
 app.use('/api/profile', require('./routes/profile'));
 app.use('/api/coupons', require('./routes/couponRoutes'));
 app.use('/api/reports', require('./routes/reportRoutes'));
+app.use('/api/payments', require('./routes/paymentRoutes'));
+app.use('/api/admin', require('./routes/adminRoutes'));
+app.use('/api/tracking', require('./routes/trackingRoutes'));
+app.use('/api/email-test', require('./routes/emailTest'));
 
 // Set static folder in production
 if (process.env.NODE_ENV === 'production') {

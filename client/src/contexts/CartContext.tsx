@@ -30,23 +30,33 @@ const CartContext = createContext<{
 } | undefined>(undefined);
 
 const cartReducer = (state: CartState, action: CartAction): CartState => {
+  console.log('🔄 Cart reducer action:', action.type, action);
+  
   switch (action.type) {
     case 'ADD_ITEM': {
       const existingItem = state.items.find(item => item.product.id === action.payload.id);
+      console.log('🔍 Existing item found:', !!existingItem);
       
       if (existingItem) {
         const newQuantity = existingItem.quantity + (action.quantity || 1);
+        console.log(`📈 Updating quantity from ${existingItem.quantity} to ${newQuantity}`);
+        
         const updatedItems = state.items.map(item =>
           item.product.id === action.payload.id
             ? { ...item, quantity: newQuantity }
             : item
         );
         
+        const newTotal = updatedItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+        const newItemCount = updatedItems.reduce((sum, item) => sum + item.quantity, 0);
+        
+        console.log(`📊 Updated totals: ${newItemCount} items, $${newTotal.toFixed(2)}`);
+        
         return {
           ...state,
           items: updatedItems,
-          total: updatedItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0),
-          itemCount: updatedItems.reduce((sum, item) => sum + item.quantity, 0)
+          total: newTotal,
+          itemCount: newItemCount
         };
       } else {
         const newItem: CartItem = {
@@ -54,19 +64,25 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
           quantity: action.quantity || 1
         };
         
+        console.log(`➕ Adding new item: ${newItem.product.name} (qty: ${newItem.quantity})`);
+        
         const newItems = [...state.items, newItem];
+        const newTotal = newItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+        const newItemCount = newItems.reduce((sum, item) => sum + item.quantity, 0);
+        
+        console.log(`📊 New totals: ${newItemCount} items, $${newTotal.toFixed(2)}`);
         
         return {
           ...state,
           items: newItems,
-          total: newItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0),
-          itemCount: newItems.reduce((sum, item) => sum + item.quantity, 0)
+          total: newTotal,
+          itemCount: newItemCount
         };
       }
     }
     
     case 'REMOVE_ITEM': {
-      const updatedItems = state.items.filter(item => item.product.id !== Number(action.payload));
+      const updatedItems = state.items.filter(item => item.product.id.toString() !== action.payload.toString());
       
       return {
         ...state,
@@ -78,7 +94,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
     
     case 'UPDATE_QUANTITY': {
       const updatedItems = state.items.map(item =>
-        item.product.id === Number(action.payload.productId)
+        item.product.id.toString() === action.payload.productId.toString()
           ? { ...item, quantity: action.payload.quantity }
           : item
       );
@@ -166,42 +182,51 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Load cart from API or localStorage
   const loadCart = async () => {
+    console.log('🔄 Loading cart...');
     dispatch({ type: 'SET_LOADING', payload: true });
     try {
       if (isAuthenticated) {
         // Fetch cart from API if user is authenticated
-        console.log('Loading cart from API for authenticated user');
+        console.log('📡 Loading cart from API for authenticated user');
         const cartData = await cartApi.getCart();
+        console.log('📦 Cart data from API:', cartData);
         const formattedItems = formatCartItems(cartData.items);
+        console.log('✅ Formatted cart items:', formattedItems);
         dispatch({ type: 'LOAD_CART', payload: formattedItems });
       } else {
         // Use localStorage for guest users
-        console.log('Loading cart from localStorage for guest user');
+        console.log('💾 Loading cart from localStorage for guest user');
         const savedCart = localStorage.getItem('cart');
+        console.log('📥 Raw localStorage cart:', savedCart);
         if (savedCart) {
           try {
             const parsedCart = JSON.parse(savedCart);
+            console.log('✅ Parsed cart from localStorage:', parsedCart);
             dispatch({ type: 'LOAD_CART', payload: parsedCart });
           } catch (error) {
-            console.error('Error loading cart from localStorage:', error);
+            console.error('❌ Error parsing cart from localStorage:', error);
             dispatch({ type: 'LOAD_CART', payload: [] });
           }
         } else {
+          console.log('📭 No cart found in localStorage');
           dispatch({ type: 'LOAD_CART', payload: [] });
         }
       }
     } catch (error) {
-      console.error('Error fetching cart data:', error);
+      console.error('❌ Error fetching cart data:', error);
       // For unauthenticated users, fall back to localStorage
       if (!isAuthenticated) {
         try {
           const savedCart = localStorage.getItem('cart');
           const parsedCart = savedCart ? JSON.parse(savedCart) : [];
+          console.log('🔄 Fallback to localStorage:', parsedCart);
           dispatch({ type: 'LOAD_CART', payload: parsedCart });
         } catch (e) {
+          console.log('🔄 Fallback to empty cart');
           dispatch({ type: 'LOAD_CART', payload: [] });
         }
       } else {
+        console.log('🔄 Error loading authenticated cart, using empty cart');
         dispatch({ type: 'LOAD_CART', payload: [] });
       }
     }
@@ -216,7 +241,9 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Save cart to localStorage for guest users
   useEffect(() => {
     if (!isAuthenticated && !state.loading) {
+      console.log('💾 Saving cart to localStorage for guest user:', state.items);
       localStorage.setItem('cart', JSON.stringify(state.items));
+      console.log('✅ Cart saved to localStorage');
     }
   }, [state.items, isAuthenticated, state.loading]);
 
@@ -227,28 +254,40 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const addToCart = async (product: Product, quantity: number = 1) => {
     try {
+      console.log(`🛒 Adding ${quantity} of product "${product.name}" (ID: ${product.id}) to cart`);
+      console.log('🔐 Authenticated:', isAuthenticated);
+      
       if (isAuthenticated) {
         // For authenticated users, call API first, then update UI based on response
-        console.log(`Adding ${quantity} of product ${product.id} to cart via API`);
+        console.log(`📡 Calling API to add product ${product.id} to cart`);
         const response = await cartApi.addToCart(product.id.toString(), quantity);
-        console.log('Cart API response:', response);
+        console.log('✅ Cart API response:', response);
         
         // Refresh cart from server to get the correct state
         await loadCart();
       } else {
-        // For guest users, update local state only
+        // For guest users, update local state immediately
+        console.log('👤 Guest user - updating local cart state');
         dispatch({ type: 'ADD_ITEM', payload: product, quantity });
+        console.log('✅ Local cart updated for guest user');
       }
     } catch (error) {
-      console.error('Error adding to cart:', error);
+      console.error('❌ Error adding to cart:', error);
       
       // If there's an error and user is authenticated, reload cart from server
       if (isAuthenticated) {
+        console.log('🔄 Reloading cart from server due to error');
         await loadCart();
+      } else {
+        // For guest users, still try to add to local state as fallback
+        console.log('🔄 Fallback: Adding to local state for guest user');
+        dispatch({ type: 'ADD_ITEM', payload: product, quantity });
       }
       
-      // Re-throw the error so UI can handle it
-      throw error;
+      // Don't re-throw the error for guest users, only for authenticated users
+      if (isAuthenticated) {
+        throw error;
+      }
     }
   };
 
@@ -306,11 +345,11 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const isInCart = (productId: string): boolean => {
-    return state.items.some(item => item.product.id === Number(productId));
+    return state.items.some(item => item.product.id.toString() === productId.toString());
   };
 
   const getCartItem = (productId: string): CartItem | undefined => {
-    return state.items.find(item => item.product.id === Number(productId));
+    return state.items.find(item => item.product.id.toString() === productId.toString());
   };
 
   const value = {
