@@ -143,10 +143,14 @@ const createProduct = asyncHandler(async (req, res) => {
     throw new Error('Valid price is required');
   }
 
-  // Handle uploaded images
+  // Handle uploaded images: upload to Cloudinary
   let imagePaths = [];
   if (req.files && req.files.length > 0) {
-    imagePaths = req.files.map(file => '/uploads/product-images/' + file.filename);
+    const uploadToCloudinary = require('../middleware/cloudinaryUpload');
+    const cloudUploads = await Promise.all(
+      req.files.map(file => uploadToCloudinary(file.path, file.filename))
+    );
+    imagePaths = cloudUploads;
   }
   // If no files, fallback to images from body or placeholder
   else if (req.body.images) {
@@ -230,10 +234,14 @@ const updateProduct = asyncHandler(async (req, res) => {
     throw new Error('Valid price is required');
   }
 
-  // Handle uploaded images
+  // Handle uploaded images: upload to Cloudinary
   let imagePaths = product.images;
   if (req.files && req.files.length > 0) {
-    imagePaths = req.files.map(file => '/uploads/product-images/' + file.filename);
+    const uploadToCloudinary = require('../middleware/cloudinaryUpload');
+    const cloudUploads = await Promise.all(
+      req.files.map(file => uploadToCloudinary(file.path, file.filename))
+    );
+    imagePaths = cloudUploads;
   } else if (req.body.images) {
     if (Array.isArray(req.body.images)) {
       imagePaths = req.body.images;

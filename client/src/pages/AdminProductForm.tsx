@@ -563,48 +563,47 @@ const AdminProductForm: React.FC = () => {
 
           {/* Specifications */}
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Specifications</h3>
-            
-            {/* Add new specification */}
-            <div className="flex items-center space-x-2 mb-4">
-              <input
-                type="text"
-                placeholder="Specification name"
-                value={specKey}
-                onChange={(e) => setSpecKey(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <input
-                type="text"
-                placeholder="Specification value"
-                value={specValue}
-                onChange={(e) => setSpecValue(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <button
-                type="button"
-                onClick={addSpecification}
-                className="px-4 py-2 bg-green-100 text-green-600 rounded-md hover:bg-green-200"
-              >
-                Add
-              </button>
-            </div>
-
-            {/* Existing specifications */}
-            {Object.entries(formData.specifications).map(([key, value]) => (
-              <div key={key} className="flex items-center justify-between py-2 border-b border-gray-100">
-                <div className="flex-1">
-                  <span className="font-medium">{key}:</span> {value}
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Product Images</h3>
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={e => {
+                const files = Array.from(e.target.files || []);
+                setSelectedFiles(files);
+                setFormData(prev => ({
+                  ...prev,
+                  images: files.map(file => URL.createObjectURL(file))
+                }));
+              }}
+              className="mb-4"
+            />
+            {/* Preview selected images */}
+            <div className="flex flex-wrap gap-4">
+              {selectedFiles.length > 0 && selectedFiles.map((file: File, idx: number) => (
+                <div key={idx} className="relative w-24 h-24 border rounded overflow-hidden">
+                  <img
+                    src={URL.createObjectURL(file)}
+                    alt={file.name}
+                    className="object-cover w-full h-full"
+                  />
+                  <button
+                    type="button"
+                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
+                    onClick={() => {
+                      const newFiles = selectedFiles.filter((_, i) => i !== idx);
+                      setSelectedFiles(newFiles);
+                      setFormData(prev => ({
+                        ...prev,
+                        images: newFiles.map(file => URL.createObjectURL(file))
+                      }));
+                    }}
+                  >
+                    &times;
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => removeSpecification(key)}
-                  className="px-3 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200 text-sm"
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
           {/* Additional Details */}

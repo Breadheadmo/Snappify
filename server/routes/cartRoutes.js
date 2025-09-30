@@ -64,24 +64,27 @@ router.get('/items', protect, asyncHandler(async (req, res) => {
     
     // Format the response to match frontend expectations
     const formattedItems = cart.items
-      .filter(item => item.product && item.product !== null) // Extra safety filter
+      .filter(item => item.product && item.product !== null)
       .map(item => {
-        try {
-          return {
-            productId: item.product.id || item.product._id,
-            name: item.product.name,
-            price: item.price,
-            image: item.product.images && item.product.images.length > 0 ? item.product.images[0] : '/images/placeholder.jpg',
-            inStock: item.product.inStock,
-            countInStock: item.product.countInStock,
-            quantity: item.quantity
-          };
-        } catch (error) {
-          console.error('Error formatting cart item:', error);
-          return null;
+        let imageUrl = '/images/placeholder.jpg';
+        if (item.product.images && item.product.images.length > 0) {
+          imageUrl = item.product.images[0];
         }
+        // If imageUrl is not a Cloudinary URL, fallback to placeholder
+        if (imageUrl && typeof imageUrl === 'string' && !imageUrl.includes('cloudinary.com')) {
+          imageUrl = '/images/placeholder.jpg';
+        }
+        return {
+          productId: item.product.id || item.product._id,
+          name: item.product.name,
+          price: item.price,
+          image: imageUrl,
+          inStock: item.product.inStock,
+          countInStock: item.product.countInStock,
+          quantity: item.quantity
+        };
       })
-      .filter(item => item !== null); // Remove any items that failed to format
+      .filter(item => item !== null);
     
     // Remove items with null products from the cart and save (this should already be done by cleanCartItems)
     const currentItemsCount = cart.items.length;

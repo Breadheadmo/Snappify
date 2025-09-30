@@ -246,23 +246,33 @@ const Home: React.FC = () => {
                 </div>
               ))}
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {featuredProducts.map((product, index) => (
-                <Link
-                  key={product.id}
-                  to={`/products/${product.id}`}
-                  className="fade-in-up block hover:shadow-lg transition-shadow duration-200"
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  <ProductCard
-                    product={product}
-                    onAddToCart={handleAddToCart}
-                  />
+            ) : featuredProducts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
+                <svg width="64" height="64" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="mx-auto mb-4 text-gray-300"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6 1a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <h3 className="text-xl font-semibold mb-2">No featured products available</h3>
+                <p className="mb-4">Check back soon or explore all products.</p>
+                <Link to="/products" className="inline-flex items-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+                  <ArrowRight className="mr-2 h-5 w-5" />
+                  Browse All Products
                 </Link>
-              ))}
-            </div>
-          )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {featuredProducts.map((product, index) => (
+                  <Link
+                    key={product.id}
+                    to={`/products/${product.id}`}
+                    className="fade-in-up block hover:shadow-lg transition-shadow duration-200"
+                    style={{ animationDelay: `${index * 0.1}s` }}
+                  >
+                    <ProductCard
+                      product={product}
+                      onAddToCart={handleAddToCart}
+                    />
+                  </Link>
+                ))}
+              </div>
+            )}
         </div>
       </section>
 

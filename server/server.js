@@ -59,6 +59,7 @@ app.use('/api/images', require('./routes/imageRoutes'));
 app.use('/api/products', require('./routes/productRoutes'));
 app.use('/api/inventory', require('./routes/inventoryRoutes'));
 app.use('/api/categories', require('./routes/categoryRoutes'));
+app.use('/api/brands', require('./routes/brandRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/cart', require('./routes/cartRoutes'));

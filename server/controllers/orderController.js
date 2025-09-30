@@ -65,9 +65,24 @@ const createOrder = asyncHandler(async (req, res) => {
       coupon.usedCount += 1;
       await coupon.save();
     }
+    // Map orderItems to always use Cloudinary image URLs
+    const mappedOrderItems = await Promise.all(orderItems.map(async item => {
+      let imageUrl = item.image;
+      if (item.product) {
+        const productDoc = await Product.findById(item.product);
+        if (productDoc && productDoc.images && productDoc.images.length > 0) {
+          imageUrl = productDoc.images[0];
+        }
+      }
+      return {
+        ...item,
+        image: imageUrl
+      };
+    }));
+
     // Create new order
     const order = new Order({
-      orderItems,
+      orderItems: mappedOrderItems,
       user: req.user._id,
       shippingAddress,
       paymentMethod,
@@ -95,7 +110,9 @@ const createOrder = asyncHandler(async (req, res) => {
     // Send order confirmation email
     try {
       await sendOrderConfirmationEmail(createdOrder, req.user);
-      } catch (emailError) {
+      console.log('Order confirmation email sent successfully');
+    } catch (emailError) {
+      console.error('Failed to send order confirmation email:', emailError);
       // Don't fail the order creation if email fails
     }
     
