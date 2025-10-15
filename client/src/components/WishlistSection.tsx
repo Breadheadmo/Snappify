@@ -11,19 +11,29 @@ const WishlistSection: React.FC = () => {
   const { showNotification } = useNotification();
 
   const handleAddToCart = (productId: string | number) => {
-    const product = wishlistState.items.find(item => String(item.id) === String(productId));
+    const product = wishlistState.items?.find(item => String(item.id) === String(productId));
     if (product) {
       addToCart(product);
       showNotification(`${product.name} added to cart!`, 'success');
     }
   };
 
+  // Add null check for wishlistState
+  if (!wishlistState) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-600">Loading wishlist...</p>
+      </div>
+    );
+  }
+
   return (
     <div>
       {wishlistState.itemCount > 0 ? (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {wishlistState.items.map(product => (
+            {/* FIXED: Added null filtering to prevent errors */}
+            {wishlistState.items?.filter(product => product != null && product.id).map(product => (
                 <div 
                   key={product.id} 
                 className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow relative"
@@ -44,8 +54,8 @@ const WishlistSection: React.FC = () => {
                 <div className="flex space-x-4">
                   <div className="w-20 h-20 flex-shrink-0">
                     <img 
-                      src={product.image} 
-                      alt={product.name}
+                      src={product.image || 'https://via.placeholder.com/200x200?text=Product+Image'} 
+                      alt={product.name || 'Product'}
                       className="w-full h-full object-cover rounded-md"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
@@ -59,12 +69,12 @@ const WishlistSection: React.FC = () => {
                       to={`/products/${product.id}`}
                       className="text-gray-900 font-medium hover:text-primary-600 transition-colors"
                     >
-                      {product.name}
+                      {product.name || 'Unnamed Product'}
                     </Link>
                     
                     <div className="flex items-center justify-between mt-2">
                       <div className="text-primary-600 font-bold">
-                        R{product.price.toLocaleString()}
+                        R{product.price ? product.price.toLocaleString() : '0'}
                       </div>
                       
                       <button
@@ -84,7 +94,8 @@ const WishlistSection: React.FC = () => {
           <div className="flex justify-end">
             <button
               onClick={() => {
-                wishlistState.items.forEach(product => addToCart(product));
+                const validItems = wishlistState.items?.filter(product => product != null) || [];
+                validItems.forEach(product => addToCart(product));
                 showNotification('All wishlist items added to cart!', 'success');
               }}
               className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"

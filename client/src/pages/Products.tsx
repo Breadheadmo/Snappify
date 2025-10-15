@@ -1,49 +1,106 @@
 import { useState, useEffect } from 'react';
 import { useNotification } from '../contexts/NotificationContext';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Grid, List, Star, ShoppingCart } from 'lucide-react';
 import { ArrowRight } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import { productApi } from '../services/api';
-import SearchFilters from '../components/SearchFilters';
+import AdvancedSearch from '../components/search/AdvancedSearch';
 import type { Product } from '../types/Product';
-import { useSearch } from '../contexts/SearchContext';
 import { useCart } from '../contexts/CartContext';
 
 const Products: React.FC = () => {
   const { showNotification } = useNotification();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [brands, setBrands] = useState<string[]>([]);
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
+  const [availableFeatures, setAvailableFeatures] = useState<string[]>([]);
   const { addToCart, refreshCart } = useCart();
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    const loadProducts = async () => {
-      setLoading(true);
+    // Load initial data
+    const loadInitialData = async () => {
       try {
-        const category = searchParams.get('category');
-        const filters: any = {};
-        if (category) {
-          filters.category = category;
-        }
-        const result = await productApi.getProducts(filters);
-        setProducts(result.products);
+        const [categoriesRes, brandsRes] = await Promise.all([
+          productApi.getCategories(),
+          productApi.getBrands()
+        ]);
+        setCategories(categoriesRes);
+        setBrands(brandsRes);
+        
+        // Load initial products
+        await loadProducts({});
       } catch (error) {
-        setProducts([]);
-      } finally {
-        setLoading(false);
+        console.error('Error loading initial data:', error);
       }
     };
-    loadProducts();
+    
+    loadInitialData();
+  }, []);
+
+  useEffect(() => {
+    const category = searchParams.get('category');
+    if (category) {
+      loadProducts({ category });
+    }
   }, [searchParams]);
+
+  const loadProducts = async (filters: any) => {
+    console.log('Loading products with filters:', filters);
+    setLoading(true);
+    try {
+      const result = await productApi.getProducts(filters);
+      console.log('API Result:', result);
+      setProducts(result.products || []);
+      
+      // Extract available tags and features from products
+      const tags = new Set<string>();
+      const features = new Set<string>();
+      
+      result.products?.forEach((product: any) => {
+        product.tags?.forEach((tag: string) => tags.add(tag));
+        product.features?.forEach((feature: string) => features.add(feature));
+      });
+      
+      setAvailableTags(Array.from(tags));
+      setAvailableFeatures(Array.from(features));
+    } catch (error) {
+      console.error('Error loading products:', error);
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = async (filters: any) => {
+    console.log('Search filters received:', filters);
+    const searchFilters: any = {};
+    
+    if (filters.query) searchFilters.search = filters.query;
+    if (filters.category) searchFilters.category = filters.category;
+    if (filters.brand) searchFilters.brand = filters.brand;
+    if (filters.minPrice) searchFilters.minPrice = filters.minPrice;
+    if (filters.maxPrice) searchFilters.maxPrice = filters.maxPrice;
+    if (filters.minRating) searchFilters.rating = filters.minRating;
+    if (filters.tags?.length > 0) searchFilters.tags = filters.tags.join(',');
+    if (filters.features?.length > 0) searchFilters.features = filters.features.join(',');
+    if (filters.inStock) searchFilters.inStock = 'true';
+    if (filters.sortBy && filters.sortBy !== 'relevance') searchFilters.sortBy = filters.sortBy;
+    
+    console.log('Converted search filters:', searchFilters);
+    await loadProducts(searchFilters);
+  };
 
   const handleAddToCart = async (product: Product) => {
     try {
-      await addToCart(product);
+      await addToCart(product, 1);
       await refreshCart();
-      showNotification(`${product.name} added to cart!`, 'success');
+      showNotification('Item added to cart successfully!', 'success');
     } catch (error) {
-      showNotification('Failed to add product to cart. Please try again.', 'error');
+      console.error('Error adding to cart:', error);
+      showNotification('Failed to add item to cart', 'error');
     }
   };
 
@@ -52,9 +109,18 @@ const Products: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Products</h1>
-          <p className="text-gray-600">Browse all available products in our store</p>
-          {/* Notification handled by NotificationProvider */}
+          <p className="text-gray-600 mb-6">Browse all available products in our store</p>
+          
+          {/* Advanced Search */}
+          <AdvancedSearch
+            categories={categories}
+            brands={brands}
+            availableTags={availableTags}
+            availableFeatures={availableFeatures}
+            onSearch={handleSearch}
+          />
         </div>
+        
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[...Array(4)].map((_, index) => (
@@ -68,32 +134,44 @@ const Products: React.FC = () => {
               </div>
             ))}
           </div>
-          ) : products.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
-              <svg width="64" height="64" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="mx-auto mb-4 text-gray-300"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6 1a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-              <h3 className="text-xl font-semibold mb-2">No products found</h3>
-              <p className="mb-4">Try adjusting your filters or check back later.</p>
-              <Link to="/" className="inline-flex items-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
-                <ArrowRight className="mr-2 h-5 w-5" />
-                Go to Home
-              </Link>
+        ) : products.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
+            <svg width="64" height="64" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="mx-auto mb-4 text-gray-300">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6 1a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h3 className="text-xl font-semibold mb-2">No products found</h3>
+            <p className="mb-4">Try adjusting your filters or check back later.</p>
+            <Link to="/" className="inline-flex items-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
+              <ArrowRight className="mr-2 h-5 w-5" />
+              Go to Home
+            </Link>
+          </div>
+        ) : (
+          <>
+            {/* Results Summary */}
+            <div className="mb-6">
+              <p className="text-gray-600">
+                Showing {products.length} product{products.length !== 1 ? 's' : ''}
+              </p>
             </div>
-          ) : (
+            
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {products.map((product, index) => (
                 <div
-                  key={product.id}
+                  key={product._id}
                   className="fade-in-up block hover:shadow-lg transition-shadow duration-200"
                   style={{ animationDelay: `${index * 0.1}s` }}
                 >
                   <ProductCard
                     product={product}
                     onAddToCart={handleAddToCart}
+                    disableButtonAnimation
                   />
                 </div>
               ))}
             </div>
-          )}
+          </>
+        )}
       </div>
     </div>
   );

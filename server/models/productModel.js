@@ -20,11 +20,66 @@ const reviewSchema = mongoose.Schema(
       type: String,
       required: true,
     },
+    helpful: {
+      type: Number,
+      default: 0,
+    },
+    verified: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+const variantSchema = mongoose.Schema({
+  size: {
+    type: String,
+    trim: true,
+  },
+  color: {
+    type: String,
+    trim: true,
+  },
+  material: {
+    type: String,
+    trim: true,
+  },
+  style: {
+    type: String,
+    trim: true,
+  },
+  sku: {
+    type: String,
+    unique: true,
+    sparse: true,
+  },
+  price: {
+    type: Number,
+    required: true,
+    min: 0,
+  },
+  originalPrice: {
+    type: Number,
+    min: 0,
+  },
+  countInStock: {
+    type: Number,
+    required: true,
+    default: 0,
+  },
+  images: [String],
+  lowStockThreshold: {
+    type: Number,
+    default: 5,
+  },
+  isActive: {
+    type: Boolean,
+    default: true,
+  },
+});
 
 const productSchema = mongoose.Schema(
   {
@@ -52,6 +107,10 @@ const productSchema = mongoose.Schema(
       required: [true, 'Category is required'],
       trim: true,
     },
+    subcategory: {
+      type: String,
+      trim: true,
+    },
     price: {
       type: Number,
       required: [true, 'Price is required'],
@@ -60,6 +119,12 @@ const productSchema = mongoose.Schema(
     originalPrice: {
       type: Number,
       default: 0,
+    },
+    // Product variants for different sizes, colors, etc.
+    variants: [variantSchema],
+    hasVariants: {
+      type: Boolean,
+      default: false,
     },
     reviews: [reviewSchema],
     rating: {
@@ -103,11 +168,57 @@ const productSchema = mongoose.Schema(
     warranty: {
       type: String,
     },
+    // SEO fields
+    seoTitle: {
+      type: String,
+    },
+    seoDescription: {
+      type: String,
+    },
+    // Status fields
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    isFeatured: {
+      type: Boolean,
+      default: false,
+    },
+    // Inventory management
+    lowStockThreshold: {
+      type: Number,
+      default: 10,
+    },
+    // Analytics
+    viewCount: {
+      type: Number,
+      default: 0,
+    },
+    purchaseCount: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+// Index for search optimization
+productSchema.index({ 
+  name: 'text', 
+  description: 'text', 
+  brand: 'text', 
+  category: 'text',
+  tags: 'text'
+});
+
+// Index for filtering
+productSchema.index({ category: 1, subcategory: 1 });
+productSchema.index({ brand: 1 });
+productSchema.index({ price: 1 });
+productSchema.index({ rating: 1 });
+productSchema.index({ isActive: 1 });
 
 const Product = mongoose.model('Product', productSchema);
 

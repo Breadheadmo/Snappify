@@ -1,0 +1,154 @@
+const mongoose = require('mongoose');
+const Product = require('../models/Product');
+
+const products = [
+  {
+    name: "Wireless Power Bank 20000mAh",
+    description: "High capacity wireless power bank with fast charging support. Compatible with all Qi-enabled devices and includes USB-C and Lightning ports for wired charging.",
+    price: 2500,
+    originalPrice: 3000,
+    category: "Power & Charging",
+    brand: "TechPro",
+    image: "https://images.unsplash.com/photo-1609592806254-b7e15210c4d9?w=400",
+    images: [
+      "https://images.unsplash.com/photo-1609592806254-b7e15210c4d9?w=400",
+      "https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?w=400",
+      "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=400"
+    ],
+    colors: ["#000000", "#ffffff", "#ff0000", "#0066cc", "#ff6600"],
+    models: ["iPhone 15", "iPhone 14", "iPhone 13", "Samsung Galaxy S24", "Samsung Galaxy S23", "Google Pixel 8"],
+    features: [
+      "20000mAh High Capacity",
+      "Wireless Qi Charging",
+      "Fast Charging Support",
+      "Multiple Device Support",
+      "LED Battery Indicator"
+    ],
+    specifications: {
+      "Capacity": "20000mAh",
+      "Input": "USB-C 18W",
+      "Wireless Output": "15W",
+      "Wired Output": "22.5W",
+      "Charging Time": "6-8 hours"
+    },
+    weight: "450g",
+    dimensions: "15×7×2.5cm",
+    warranty: "2 Years",
+    inStock: true,
+    stockQuantity: 50,
+    rating: 4.5,
+    numReviews: 12
+  },
+  {
+    name: "Premium Bluetooth Earphones",
+    description: "High-quality wireless earphones with active noise cancellation, premium sound quality, and long battery life. Perfect for music lovers and professionals.",
+    price: 1800,
+    originalPrice: 2200,
+    category: "Audio",
+    brand: "SoundMax",
+    image: "https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?w=400",
+    images: [
+      "https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?w=400",
+      "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=400",
+      "https://images.unsplash.com/photo-1484704849700-f032a568e944?w=400"
+    ],
+    colors: ["#000000", "#ffffff", "#8b4513", "#ff1493", "#00ced1"],
+    models: ["Universal", "iOS Optimized", "Android Optimized"],
+    features: [
+      "Active Noise Cancellation",
+      "30-hour Battery Life",
+      "Premium Sound Quality",
+      "Touch Controls",
+      "Water Resistant IPX7"
+    ],
+    specifications: {
+      "Driver Size": "40mm",
+      "Frequency Response": "20Hz-20kHz",
+      "Battery Life": "30 hours",
+      "Charging Time": "2 hours",
+      "Bluetooth": "5.2"
+    },
+    weight: "250g",
+    dimensions: "18×15×8cm",
+    warranty: "1 Year",
+    inStock: true,
+    stockQuantity: 30,
+    rating: 4.7,
+    numReviews: 8
+  },
+  {
+    name: "Smart Phone Case with Stand",
+    description: "Protective phone case with built-in stand functionality. Durable materials provide excellent protection while maintaining easy access to all ports and buttons.",
+    price: 450,
+    originalPrice: 600,
+    category: "Accessories",
+    brand: "ProtectPro",
+    image: "https://images.unsplash.com/photo-1556656793-08538906a9f8?w=400",
+    images: [
+      "https://images.unsplash.com/photo-1556656793-08538906a9f8?w=400",
+      "https://images.unsplash.com/photo-1605238693842-d0351e8c2d7d?w=400",
+      "https://images.unsplash.com/photo-1574944985070-8f3ebc6b79d2?w=400"
+    ],
+    colors: ["#000000", "#0066cc", "#ff0000", "#9acd32", "#ff69b4", "#daa520"],
+    models: [
+      "iPhone 15 Pro Max", "iPhone 15 Pro", "iPhone 15", "iPhone 14 Pro Max", "iPhone 14 Pro", "iPhone 14",
+      "Samsung Galaxy S24 Ultra", "Samsung Galaxy S24+", "Samsung Galaxy S24", 
+      "Samsung Galaxy S23 Ultra", "Samsung Galaxy S23+", "Samsung Galaxy S23",
+      "Google Pixel 8 Pro", "Google Pixel 8", "Google Pixel 7 Pro", "Google Pixel 7"
+    ],
+    features: [
+      "Drop Protection up to 10ft",
+      "Built-in Stand Function",
+      "Precise Port Access",
+      "Wireless Charging Compatible",
+      "Anti-Slip Grip"
+    ],
+    specifications: {
+      "Material": "TPU + PC",
+      "Drop Protection": "10 feet",
+      "Weight": "50g",
+      "Thickness": "2mm",
+      "Compatibility": "Wireless Charging"
+    },
+    weight: "50g",
+    dimensions: "16×8×1cm",
+    warranty: "6 Months",
+    inStock: true,
+    stockQuantity: 75,
+    rating: 4.3,
+    numReviews: 15
+  }
+];
+
+async function importProducts() {
+  try {
+    // Connect to MongoDB
+    await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/snappify');
+    
+    console.log('Connected to MongoDB');
+    
+    // Clear existing products
+    await Product.deleteMany({});
+    console.log('Cleared existing products');
+    
+    // Insert new products
+    const insertedProducts = await Product.insertMany(products);
+    console.log(`Imported ${insertedProducts.length} products successfully`);
+    
+    // Display imported products
+    insertedProducts.forEach(product => {
+      console.log(`- ${product.name} (${product.colors?.length || 0} colors, ${product.models?.length || 0} models)`);
+    });
+    
+    mongoose.connection.close();
+  } catch (error) {
+    console.error('Error importing products:', error);
+    process.exit(1);
+  }
+}
+
+if (require.main === module) {
+  importProducts();
+}
+
+module.exports = importProducts;

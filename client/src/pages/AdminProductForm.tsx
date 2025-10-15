@@ -24,13 +24,15 @@ interface ProductFormData {
 }
 
 const AdminProductForm: React.FC = () => {
-  // State for selected image files
   const { user, isAuthenticated, isAuthLoading } = useAuth();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEditMode = Boolean(id);
-  // State for selected image files
+  
+  // State for image management
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [existingImages, setExistingImages] = useState<string[]>([]);
+  const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
 
   const [formData, setFormData] = useState<ProductFormData>({
     colors: [''],
@@ -59,6 +61,8 @@ const AdminProductForm: React.FC = () => {
   const [formSuccess, setFormSuccess] = useState('');
   const [specKey, setSpecKey] = useState('');
   const [specValue, setSpecValue] = useState('');
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated && user?.isAdmin) {
@@ -125,7 +129,7 @@ const AdminProductForm: React.FC = () => {
           price: product.price || 0,
           originalPrice: product.originalPrice || 0,
           description: product.description || '',
-          images: product.images?.length ? product.images : [''],
+          images: [], // We'll handle images separately
           brand: product.brand || '',
           category: product.category || '',
           countInStock: product.countInStock || 0,
@@ -136,6 +140,8 @@ const AdminProductForm: React.FC = () => {
           dimensions: product.dimensions || '',
           warranty: product.warranty || ''
         });
+        // Set existing images for display
+        setExistingImages(product.images || []);
       }
     } catch (error) {
       console.error('Error fetching product:', error);
@@ -188,6 +194,12 @@ const AdminProductForm: React.FC = () => {
       selectedFiles.forEach((file) => {
         form.append('images[]', file);
       });
+    }
+    
+    // For edit mode, send existing images that should be kept
+    if (isEditMode) {
+      const keepImages = existingImages.filter(img => !imagesToDelete.includes(img));
+      form.append('existingImages', JSON.stringify(keepImages));
     }
 
     const url = isEditMode ? `/api/products/${id}` : '/api/products';
@@ -261,6 +273,88 @@ const AdminProductForm: React.FC = () => {
       ...prev,
       specifications: newSpecs
     }));
+  };
+
+  // File drag and drop handlers
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    
+    const files = Array.from(e.dataTransfer.files).filter(file => 
+      file.type.startsWith('image/')
+    );
+    
+    if (files.length === 0) return;
+    
+    // Check total images limit
+    const totalImages = existingImages.length - imagesToDelete.length + selectedFiles.length + files.length;
+    if (totalImages > 10) {
+      alert(`You can only have a maximum of 10 images. Currently you would have ${totalImages} images.`);
+      return;
+    }
+    
+    setSelectedFiles(prev => [...prev, ...files]);
+  };
+
+  // Image reordering handlers
+  const handleImageDragStart = (e: React.DragEvent, index: number, type: 'existing' | 'new') => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', '');
+    e.dataTransfer.setData('imageType', type);
+  };
+
+  const handleImageDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleImageDrop = (e: React.DragEvent, dropIndex: number, dropType: 'existing' | 'new') => {
+    e.preventDefault();
+    
+    const imageType = e.dataTransfer.getData('imageType') as 'existing' | 'new';
+    
+    if (draggedIndex === null || imageType !== dropType) return;
+
+    if (imageType === 'existing') {
+      const newExistingImages = [...existingImages];
+      const draggedImage = newExistingImages[draggedIndex];
+      newExistingImages.splice(draggedIndex, 1);
+      newExistingImages.splice(dropIndex, 0, draggedImage);
+      setExistingImages(newExistingImages);
+    } else {
+      const newSelectedFiles = [...selectedFiles];
+      const draggedFile = newSelectedFiles[draggedIndex];
+      newSelectedFiles.splice(draggedIndex, 1);
+      newSelectedFiles.splice(dropIndex, 0, draggedFile);
+      setSelectedFiles(newSelectedFiles);
+    }
+    
+    setDraggedIndex(null);
+  };
+
+  const moveImage = (fromIndex: number, toIndex: number, type: 'existing' | 'new') => {
+    if (type === 'existing') {
+      const newExistingImages = [...existingImages];
+      const movedImage = newExistingImages.splice(fromIndex, 1)[0];
+      newExistingImages.splice(toIndex, 0, movedImage);
+      setExistingImages(newExistingImages);
+    } else {
+      const newSelectedFiles = [...selectedFiles];
+      const movedFile = newSelectedFiles.splice(fromIndex, 1)[0];
+      newSelectedFiles.splice(toIndex, 0, movedFile);
+      setSelectedFiles(newSelectedFiles);
+    }
   };
 
   if (loading) {
@@ -423,45 +517,226 @@ const AdminProductForm: React.FC = () => {
           {/* Images */}
           <div className="bg-white rounded-lg shadow-md p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Product Images</h3>
-            <input
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={e => {
-                const files = Array.from(e.target.files || []);
-                if (files.length === 0) return;
-                setSelectedFiles(prev => [...prev, ...files]);
-                setFormData(prev => ({
-                  ...prev,
-                  images: [...prev.images, ...files.map(file => URL.createObjectURL(file))]
-                }));
-              }}
-              className="mb-4"
-            />
-            {/* Preview selected images */}
-            <div className="flex flex-wrap gap-4">
-              {selectedFiles && selectedFiles.length > 0 && selectedFiles.map((file: File, idx: number) => (
-                <div key={idx} className="relative w-24 h-24 border rounded overflow-hidden">
-                  <img
-                    src={URL.createObjectURL(file)}
-                    alt={file.name}
-                    className="object-cover w-full h-full"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedFiles((prev: File[]) => prev.filter((_, i) => i !== idx));
-                      setFormData(prev => ({
-                        ...prev,
-                        images: prev.images.filter((_, i) => i !== idx)
-                      }));
-                    }}
-                    className="absolute top-1 right-1 bg-red-500 text-white rounded px-1 text-xs"
-                  >
-                    ×
-                  </button>
+            
+            {/* Drag and Drop Upload Area */}
+            <div 
+              className={`mb-4 border-2 border-dashed rounded-lg p-6 transition-colors ${
+                isDragOver 
+                  ? 'border-blue-500 bg-blue-50' 
+                  : 'border-gray-300 hover:border-blue-400'
+              }`}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              <div className="text-center">
+                <div className="text-4xl mb-2">📸</div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Upload Images (Max 10 files total)
+                </label>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={e => {
+                    const files = Array.from(e.target.files || []);
+                    if (files.length === 0) return;
+                    
+                    // Check total images limit
+                    const totalImages = existingImages.length - imagesToDelete.length + selectedFiles.length + files.length;
+                    if (totalImages > 10) {
+                      alert(`You can only have a maximum of 10 images. Currently you would have ${totalImages} images.`);
+                      return;
+                    }
+                    
+                    // Add new files to existing ones
+                    setSelectedFiles(prev => [...prev, ...files]);
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
+                />
+                <p className="text-sm text-gray-500">
+                  Drag and drop images here, or click to browse
+                </p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Supports: JPG, PNG, GIF (Max 5MB each)
+                </p>
+              </div>
+            </div>
+            
+            {/* Show existing images (for edit mode) */}
+            {isEditMode && existingImages.length > 0 && (
+              <div className="mb-6">
+                <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
+                  Current Images ({existingImages.filter(img => !imagesToDelete.includes(img)).length}/{existingImages.length})
+                  <span className="ml-2 text-xs text-gray-500">(Drag to reorder)</span>
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                  {existingImages.map((imageUrl, idx) => (
+                    <div 
+                      key={idx} 
+                      className={`relative group cursor-move ${imagesToDelete.includes(imageUrl) ? 'opacity-50' : ''}`}
+                      draggable
+                      onDragStart={(e) => handleImageDragStart(e, idx, 'existing')}
+                      onDragOver={handleImageDragOver}
+                      onDrop={(e) => handleImageDrop(e, idx, 'existing')}
+                    >
+                      <div className="aspect-square w-full border-2 border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                        <img
+                          src={imageUrl}
+                          alt={`Product image ${idx + 1}`}
+                          className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                          draggable={false}
+                        />
+                      </div>
+                      
+                      {/* Move buttons */}
+                      <div className="absolute top-1 left-1 flex gap-1">
+                        {idx > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => moveImage(idx, idx - 1, 'existing')}
+                            className="bg-blue-500 hover:bg-blue-600 text-white rounded w-5 h-5 flex items-center justify-center text-xs"
+                            title="Move left"
+                          >
+                            ←
+                          </button>
+                        )}
+                        {idx < existingImages.length - 1 && (
+                          <button
+                            type="button"
+                            onClick={() => moveImage(idx, idx + 1, 'existing')}
+                            className="bg-blue-500 hover:bg-blue-600 text-white rounded w-5 h-5 flex items-center justify-center text-xs"
+                            title="Move right"
+                          >
+                            →
+                          </button>
+                        )}
+                      </div>
+                      
+                      {/* Delete/Restore button */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setImagesToDelete(prev => 
+                            prev.includes(imageUrl) 
+                              ? prev.filter(img => img !== imageUrl)
+                              : [...prev, imageUrl]
+                          );
+                        }}
+                        className={`absolute -top-2 -right-2 rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shadow-lg transition-colors ${
+                          imagesToDelete.includes(imageUrl) 
+                            ? 'bg-green-500 hover:bg-green-600 text-white' 
+                            : 'bg-red-500 hover:bg-red-600 text-white'
+                        }`}
+                        title={imagesToDelete.includes(imageUrl) ? 'Restore image' : 'Mark for deletion'}
+                      >
+                        {imagesToDelete.includes(imageUrl) ? '↻' : '×'}
+                      </button>
+                      
+                      {/* Deletion overlay */}
+                      {imagesToDelete.includes(imageUrl) && (
+                        <div className="absolute inset-0 bg-red-500 bg-opacity-20 rounded-lg flex items-center justify-center">
+                          <span className="text-red-700 font-bold text-xs">WILL DELETE</span>
+                        </div>
+                      )}
+                      
+                      <p className="text-xs text-gray-500 mt-1">
+                        Image {idx + 1}
+                      </p>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              </div>
+            )}
+            
+            {/* Preview newly selected images */}
+            {selectedFiles.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
+                  New Images ({selectedFiles.length})
+                  <span className="ml-2 text-xs text-gray-500">(Drag to reorder)</span>
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                  {selectedFiles.map((file: File, idx: number) => (
+                    <div 
+                      key={idx} 
+                      className="relative group cursor-move"
+                      draggable
+                      onDragStart={(e) => handleImageDragStart(e, idx, 'new')}
+                      onDragOver={handleImageDragOver}
+                      onDrop={(e) => handleImageDrop(e, idx, 'new')}
+                    >
+                      <div className="aspect-square w-full border-2 border-blue-200 rounded-lg overflow-hidden bg-gray-50">
+                        <img
+                          src={URL.createObjectURL(file)}
+                          alt={file.name}
+                          className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                          draggable={false}
+                        />
+                      </div>
+                      
+                      {/* Move buttons */}
+                      <div className="absolute top-1 left-1 flex gap-1">
+                        {idx > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => moveImage(idx, idx - 1, 'new')}
+                            className="bg-blue-500 hover:bg-blue-600 text-white rounded w-5 h-5 flex items-center justify-center text-xs"
+                            title="Move left"
+                          >
+                            ←
+                          </button>
+                        )}
+                        {idx < selectedFiles.length - 1 && (
+                          <button
+                            type="button"
+                            onClick={() => moveImage(idx, idx + 1, 'new')}
+                            className="bg-blue-500 hover:bg-blue-600 text-white rounded w-5 h-5 flex items-center justify-center text-xs"
+                            title="Move right"
+                          >
+                            →
+                          </button>
+                        )}
+                      </div>
+                      
+                      {/* Remove button */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedFiles(prev => prev.filter((_, i) => i !== idx));
+                        }}
+                        className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold shadow-lg transition-colors"
+                        title="Remove image"
+                      >
+                        ×
+                      </button>
+                      
+                      <p className="text-xs text-gray-500 mt-1 truncate" title={file.name}>
+                        {file.name}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Summary */}
+            <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+              <p className="text-sm text-gray-600">
+                <strong>Total Images:</strong> {
+                  (existingImages.length - imagesToDelete.length) + selectedFiles.length
+                } / 10
+                {isEditMode && imagesToDelete.length > 0 && (
+                  <span className="text-red-600 ml-2">
+                    ({imagesToDelete.length} marked for deletion)
+                  </span>
+                )}
+              </p>
+              {((existingImages.length - imagesToDelete.length) + selectedFiles.length) === 0 && (
+                <p className="text-sm text-amber-600 mt-1">
+                  ⚠️ At least one image is recommended for better product visibility
+                </p>
+              )}
             </div>
           </div>
 
@@ -563,47 +838,58 @@ const AdminProductForm: React.FC = () => {
 
           {/* Specifications */}
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Product Images</h3>
-            <input
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={e => {
-                const files = Array.from(e.target.files || []);
-                setSelectedFiles(files);
-                setFormData(prev => ({
-                  ...prev,
-                  images: files.map(file => URL.createObjectURL(file))
-                }));
-              }}
-              className="mb-4"
-            />
-            {/* Preview selected images */}
-            <div className="flex flex-wrap gap-4">
-              {selectedFiles.length > 0 && selectedFiles.map((file: File, idx: number) => (
-                <div key={idx} className="relative w-24 h-24 border rounded overflow-hidden">
-                  <img
-                    src={URL.createObjectURL(file)}
-                    alt={file.name}
-                    className="object-cover w-full h-full"
-                  />
-                  <button
-                    type="button"
-                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center"
-                    onClick={() => {
-                      const newFiles = selectedFiles.filter((_, i) => i !== idx);
-                      setSelectedFiles(newFiles);
-                      setFormData(prev => ({
-                        ...prev,
-                        images: newFiles.map(file => URL.createObjectURL(file))
-                      }));
-                    }}
-                  >
-                    &times;
-                  </button>
-                </div>
-              ))}
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Specifications</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <input
+                type="text"
+                placeholder="Specification key (e.g., Screen Size)"
+                value={specKey}
+                onChange={(e) => setSpecKey(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <div className="flex space-x-2">
+                <input
+                  type="text"
+                  placeholder="Value (e.g., 6.1 inches)"
+                  value={specValue}
+                  onChange={(e) => setSpecValue(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  type="button"
+                  onClick={addSpecification}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                >
+                  Add
+                </button>
+              </div>
             </div>
+            
+            {/* Display existing specifications */}
+            {Object.keys(formData.specifications).length > 0 && (
+              <div className="border border-gray-200 rounded-md">
+                <h4 className="text-sm font-medium text-gray-700 p-3 bg-gray-50 border-b border-gray-200">
+                  Current Specifications
+                </h4>
+                <div className="p-3 space-y-2">
+                  {Object.entries(formData.specifications).map(([key, value]) => (
+                    <div key={key} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
+                      <div>
+                        <span className="font-medium text-gray-700">{key}:</span>
+                        <span className="ml-2 text-gray-600">{value}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeSpecification(key)}
+                        className="px-2 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200 text-sm"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Additional Details */}

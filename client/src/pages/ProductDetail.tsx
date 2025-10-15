@@ -7,12 +7,16 @@ import {
   CarouselPrevious,
 } from "../components/ui/carousel";
 import { Card, CardContent } from "../components/ui/card";
+import ImageZoom from '../components/products/ImageZoom';
 import { useAuth } from '../contexts/AuthContext';
+import { useCart } from '../contexts/CartContext';
+import { useNotification } from '../contexts/NotificationContext';
 import { useParams, Link } from 'react-router-dom';
 import { productApi, reviewApi } from '../services/api';
 import { transformBackendProduct } from '../services/api';
-import { Star, ShoppingCart, ArrowLeft } from 'lucide-react';
+import { Star, ShoppingCart, ArrowLeft, Check } from 'lucide-react';
 import type { Product } from '../types/Product';
+import WishlistButton from '../components/wishlist/WishlistButton';
 
 interface Review {
   id: string;
@@ -23,19 +27,12 @@ interface Review {
 }
 
 const ProductDetail: React.FC = () => {
-  // Color and model selection state
-  const [selectedColor, setSelectedColor] = useState<string | null>(null);
-  const [selectedModel, setSelectedModel] = useState<string | null>(null);
-  // Carousel state
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
   const [currentImageIdx, setCurrentImageIdx] = useState(0);
-  // Remove duplicate images declaration; use images from product below
-  const handlePrevImage = () => {
-    setCurrentImageIdx(idx => (images.length > 0 ? (idx === 0 ? images.length - 1 : idx - 1) : 0));
-  };
-  const handleNextImage = () => {
-    setCurrentImageIdx(idx => (images.length > 0 ? (idx === images.length - 1 ? 0 : idx + 1) : 0));
-  };
+  
   const { user } = useAuth();
+  const { addToCart } = useCart();
+  const { showNotification } = useNotification();
   const { id } = useParams();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,32 +44,46 @@ const ProductDetail: React.FC = () => {
   const [ratingError, setRatingError] = useState<string | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(true);
-  const handleStarClick = async (rating: number) => {
-    if (!product || ratingSubmitting) return;
-    if (!user) {
-      setRatingError('You must be logged in to rate.');
-      return;
-    }
-    setRatingSubmitting(true);
-    setRatingError(null);
-    try {
-      // Use product._id as string for MongoDB ObjectId
-      const productId = product._id || product.id;
-      if (!productId || typeof productId !== 'string') throw new Error('Invalid product ID');
-      await reviewApi.addReview(productId, rating, "");
-      setUserRating(rating);
-      // Optionally, refetch product to update average rating
-      // const updated = await productApi.getProductById(productId);
-      // setProduct(updated);
-    } catch (err: any) {
-      if (err && err.message) {
-        setRatingError(err.message);
-      } else {
-        setRatingError("Failed to submit rating. Please try again.");
+
+  // Helper functions to parse JSON data
+  const parseFeatures = (features: any): string[] => {
+    if (!features) return [];
+    if (typeof features === 'string') {
+      try {
+        const parsed = JSON.parse(features);
+        return Array.isArray(parsed) ? parsed : [features];
+      } catch {
+        // If it's a string but not valid JSON, split by common delimiters
+        return features.split(/[,;\n]/).map((f: string) => f.trim()).filter((f: string) => f.length > 0);
       }
-    } finally {
-      setRatingSubmitting(false);
     }
+    return Array.isArray(features) ? features : [];
+  };
+
+  const parseSpecifications = (specs: any): Record<string, any> => {
+    if (!specs) return {};
+    if (typeof specs === 'string') {
+      try {
+        return JSON.parse(specs);
+      } catch {
+        return {};
+      }
+    }
+    return typeof specs === 'object' ? specs : {};
+  };
+
+  const handlePrevImage = () => {
+    const images = product?.images && product.images.length > 0
+      ? product.images
+      : [product?.image || 'https://via.placeholder.com/400x300?text=Product+Image'];
+    setCurrentImageIdx(idx => (images.length > 0 ? (idx === 0 ? images.length - 1 : idx - 1) : 0));
+  };
+  
+  const handleNextImage = () => {
+    const images = product?.images && product.images.length > 0
+      ? product.images
+      : [product?.image || 'https://via.placeholder.com/400x300?text=Product+Image'];
+    setCurrentImageIdx(idx => (images.length > 0 ? (idx === images.length - 1 ? 0 : idx + 1) : 0));
   };
 
   useEffect(() => {
@@ -102,10 +113,9 @@ const ProductDetail: React.FC = () => {
       if (!id) return;
       setReviewsLoading(true);
       try {
-  // Ensure id is a number for reviewApi
-  const productId = Number(id);
-  if (isNaN(productId)) throw new Error('Invalid product ID');
-  const data = await reviewApi.getProductReviews(productId);
+        const productId = Number(id);
+        if (isNaN(productId)) throw new Error('Invalid product ID');
+        const data = await reviewApi.getProductReviews(productId);
         setReviews(data);
       } catch (err) {
         setReviews([]);
@@ -117,16 +127,41 @@ const ProductDetail: React.FC = () => {
   }, [id]);
 
   const handleAddToCart = () => {
-    if (product) {
-      // Pass selected options to cart logic (extend as needed)
-      const cartItem = {
-        ...product,
-        quantity,
-        color: selectedColor,
-        model: selectedModel,
-      };
-      console.log('Adding to cart:', cartItem);
-      // TODO: Integrate with actual cart logic if needed
+    if (!product) {
+      showNotification('Product not found. Please try again.', 'error');
+      return;
+    }
+
+    if (!product.inStock) {
+      showNotification('This product is currently out of stock.', 'error');
+      return;
+    }
+
+    const cartItem = {
+      ...product,
+      quantity,
+      selectedVariants,
+    };
+
+    try {
+      addToCart(cartItem, quantity);
+      
+      let message = `${product.name} added to cart!`;
+      if (quantity > 1) {
+        message += ` Quantity: ${quantity}`;
+      }
+      if (selectedVariants.color || selectedVariants.model) {
+        const variants = [];
+        if (selectedVariants.color) variants.push(`Color: ${selectedVariants.color}`);
+        if (selectedVariants.model) variants.push(`Model: ${selectedVariants.model}`);
+        message += ` (${variants.join(', ')})`;
+      }
+      
+      showNotification(message, 'success');
+
+    } catch (error) {
+      console.error('❌ Error adding to cart:', error);
+      showNotification('Failed to add item to cart. Please try again.', 'error');
     }
   };
 
@@ -134,19 +169,6 @@ const ProductDetail: React.FC = () => {
     if (newQuantity >= 1 && newQuantity <= 10) {
       setQuantity(newQuantity);
     }
-  };
-
-  const renderStars = (rating: number) => {
-    return Array.from({ length: 5 }, (_, i) => (
-      <Star
-        key={i}
-        className={`h-5 w-5 ${
-          i < Math.floor(rating) 
-            ? 'text-yellow-400 fill-current' 
-            : 'text-gray-300'
-        }`}
-      />
-    ));
   };
 
   if (loading) {
@@ -164,23 +186,25 @@ const ProductDetail: React.FC = () => {
     );
   }
 
-  // Images array for carousel
   const images = product.images && product.images.length > 0
     ? product.images
     : [product.image || 'https://via.placeholder.com/400x300?text=Product+Image'];
 
+  const features = parseFeatures(product.features);
+  const specifications = parseSpecifications(product.specifications);
+
   return (
-  <div className="min-h-screen bg-gray-50 py-10">
-      <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8 flex flex-col md:flex-row gap-8">
-        <div className="flex-1 flex flex-col items-center justify-center">
-          <Carousel className="w-full max-w-xs">
+    <div className="min-h-screen bg-gray-50 py-10">
+      <div className="max-w-7xl mx-auto bg-white rounded-lg shadow-lg p-8 flex flex-col lg:flex-row gap-8">
+        <div className="flex-1 flex flex-col items-center justify-center relative">
+          <Carousel className="w-full max-w-md">
             <CarouselContent>
               {images.map((img, idx) => (
                 <CarouselItem key={idx}>
                   <div className="p-1">
                     <Card>
                       <CardContent className="flex aspect-square items-center justify-center p-6">
-                        <img src={img} alt={product.name} className="object-cover w-full h-full rounded-lg" />
+                        <ImageZoom src={img} alt={product.name} />
                       </CardContent>
                     </Card>
                   </div>
@@ -191,43 +215,87 @@ const ProductDetail: React.FC = () => {
             <CarouselNext />
           </Carousel>
           {!product.inStock && (
-            <span className="px-3 py-1 bg-red-500 text-white rounded-full text-xs font-medium">Out of Stock</span>
+            <span className="px-3 py-1 bg-red-500 text-white rounded-full text-xs font-medium mt-4">Out of Stock</span>
           )}
-          {/* Color Picker */}
-          {product.colors && product.colors.length > 0 && (
-            <div className="mt-4 w-full">
-              <h3 className="text-sm font-semibold mb-2">Choose Color:</h3>
-              <div className="flex gap-2 flex-wrap">
-                {product.colors.map((color: string) => (
-                  <button
-                    key={color}
-                    type="button"
-                    className={`w-8 h-8 rounded-full border-2 transition-all duration-200 focus:outline-none ${selectedColor === color ? 'border-primary-600 ring-2 ring-primary-400' : 'border-gray-300'} bg-[${color}]`}
-                    style={{ backgroundColor: color }}
-                    onClick={() => setSelectedColor(color)}
-                    aria-label={color}
-                  />
-                ))}
+          
+          {/* Enhanced Variant Selection */}
+          <div className="mt-6 w-full max-w-md space-y-6">
+            {/* Color Selection */}
+            {product.colors && product.colors.length > 0 && (
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="text-lg font-semibold mb-3 text-gray-800">Choose Color:</h3>
+                <div className="flex gap-3 flex-wrap">
+                  {product.colors.map((color: string) => (
+                    <button
+                      key={color}
+                      type="button"
+                      className={`w-12 h-12 rounded-full border-4 transition-all duration-300 transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-blue-300 shadow-lg ${
+                        selectedVariants.color === color 
+                          ? 'border-blue-600 ring-4 ring-blue-200 scale-110 shadow-xl' 
+                          : 'border-gray-300 hover:border-gray-400 hover:shadow-xl'
+                      }`}
+                      style={{ backgroundColor: color }}
+                      onClick={() => setSelectedVariants(prev => ({ ...prev, color }))}
+                      aria-label={`Select ${color} color`}
+                      title={`Select ${color} color`}
+                    />
+                  ))}
+                </div>
+                {selectedVariants.color && (
+                  <div className="mt-3 p-2 bg-blue-50 rounded-md">
+                    <p className="text-sm font-medium text-blue-800">
+                      Selected Color: <span className="text-blue-600">{selectedVariants.color}</span>
+                    </p>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
-          {/* Model Picker for Screen Protectors and Chargers */}
-          {(product.category.toLowerCase().includes('screen protector') || product.category.toLowerCase().includes('charger')) && product.models && product.models.length > 0 && (
-            <div className="mt-4 w-full">
-              <h3 className="text-sm font-semibold mb-2">Choose Phone Model:</h3>
-              <select
-                className="w-full border rounded p-2"
-                value={selectedModel || ''}
-                onChange={e => setSelectedModel(e.target.value)}
-              >
-                <option value="" disabled>Select model</option>
-                {product.models.map((model: string) => (
-                  <option key={model} value={model}>{model}</option>
-                ))}
-              </select>
-            </div>
-          )}
+            )}
+
+            {/* Model Selection */}
+            {product.models && product.models.length > 0 && (
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h3 className="text-lg font-semibold mb-3 text-gray-800">Choose Model:</h3>
+                <select
+                  className="w-full border-2 border-gray-300 rounded-lg p-3 text-lg focus:ring-4 focus:ring-blue-300 focus:border-blue-500 transition-all duration-200 bg-white"
+                  value={selectedVariants.model || ''}
+                  onChange={e => setSelectedVariants(prev => ({ ...prev, model: e.target.value }))}
+                >
+                  <option value="" disabled>Select your device model</option>
+                  {product.models.map((model: string) => (
+                    <option key={model} value={model}>{model}</option>
+                  ))}
+                </select>
+                {selectedVariants.model && (
+                  <div className="mt-3 p-2 bg-green-50 rounded-md">
+                    <p className="text-sm font-medium text-green-800">
+                      Selected Model: <span className="text-green-600">{selectedVariants.model}</span>
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Variant Summary */}
+            {(selectedVariants.color || selectedVariants.model) && (
+              <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                <h4 className="font-semibold text-blue-800 mb-2">Your Selection:</h4>
+                <div className="space-y-1">
+                  {selectedVariants.color && (
+                    <p className="text-sm text-blue-700">
+                      Color: <span className="font-medium">{selectedVariants.color}</span>
+                    </p>
+                  )}
+                  {selectedVariants.model && (
+                    <p className="text-sm text-blue-700">
+                      Model: <span className="font-medium">{selectedVariants.model}</span>
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
+        
         <div className="flex-1 flex flex-col justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
@@ -236,27 +304,21 @@ const ProductDetail: React.FC = () => {
               <span className="text-sm text-gray-500">Brand: {product.brand}</span>
             </div>
             <div className="flex items-center mb-2">
-              {[...Array(5)].map((_, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => handleStarClick(i + 1)}
-                  disabled={ratingSubmitting || !user}
-                  className="focus:outline-none"
-                  aria-label={`Rate ${i + 1} stars`}
-                >
+              <div className="flex items-center">
+                {[...Array(5)].map((_, i) => (
                   <Star
-                    className={`h-5 w-5 transition-colors duration-150 ${
-                      (userRating !== null ? i < userRating : i < Math.floor(product.rating))
+                    key={i}
+                    className={`h-5 w-5 ${
+                      i < Math.floor(product.rating)
                         ? 'text-yellow-400 fill-current'
                         : 'text-gray-300'
                     }`}
                   />
-                </button>
-              ))}
-              <span className="ml-2 text-gray-600">({product.numReviews || product.reviews} reviews)</span>
-              {ratingError && <span className="ml-4 text-red-500 text-sm">{ratingError}</span>}
-              {userRating && <span className="ml-4 text-green-600 text-sm">Thank you for rating!</span>}
+                ))}
+                <span className="ml-2 text-gray-600">
+                  {product.rating.toFixed(1)} ({product.numReviews || product.reviews} reviews)
+                </span>
+              </div>
             </div>
             <div className="mb-4">
               <span className="text-2xl font-bold text-gray-900">R{product.price.toLocaleString()}</span>
@@ -264,33 +326,104 @@ const ProductDetail: React.FC = () => {
                 <span className="ml-2 text-sm text-gray-500 line-through">R{product.originalPrice.toLocaleString()}</span>
               )}
             </div>
-            <p className="text-gray-700 mb-4">{product.description}</p>
-            {product.features && product.features.length > 0 && (
-              <div className="mb-4">
-                <h3 className="font-semibold mb-2">Features:</h3>
-                <ul className="list-disc list-inside text-gray-600">
-                  {product.features.map((feature, idx) => (
-                    <li key={idx}>{feature}</li>
+            <p className="text-gray-700 mb-4 leading-relaxed">{product.description}</p>
+            
+            {/* Features Section - IMPROVED */}
+            {features.length > 0 && (
+              <div className="mb-6 bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-xl border border-blue-100">
+                <h3 className="text-lg font-bold mb-3 text-gray-800 flex items-center">
+                  <span className="bg-primary-600 text-white rounded-full p-1 mr-2">
+                    <Check className="h-4 w-4" />
+                  </span>
+                  Key Features
+                </h3>
+                <ul className="space-y-2">
+                  {features.map((feature, idx) => (
+                    <li key={idx} className="flex items-start text-gray-700">
+                      <span className="text-primary-600 mr-3 mt-1 flex-shrink-0">
+                        <Check className="h-5 w-5" />
+                      </span>
+                      <span className="leading-relaxed text-sm">{feature}</span>
+                    </li>
                   ))}
                 </ul>
               </div>
             )}
-            {product.specifications && Object.keys(product.specifications).length > 0 && (
+            
+            {/* Specifications Section - FIXED */}
+            {Object.keys(specifications).length > 0 && (
               <div className="mb-4">
-                <h3 className="font-semibold mb-2">Specifications:</h3>
-                <ul className="list-disc list-inside text-gray-600">
-                  {Object.entries(product.specifications).map(([key, value], idx) => (
-                    <li key={idx}><span className="font-medium">{key}:</span> {value}</li>
+                <h3 className="font-semibold mb-2 text-lg text-gray-800">Specifications:</h3>
+                <div className="grid grid-cols-1 gap-2 text-sm text-gray-600 bg-gray-50 p-4 rounded-lg">
+                  {Object.entries(specifications).map(([key, value], idx) => (
+                    <div key={idx} className="flex py-2 border-b border-gray-200 last:border-0">
+                      <span className="font-medium text-gray-700 min-w-[150px]">{key}:</span>
+                      <span className="flex-1 text-gray-600">{String(value)}</span>
+                    </div>
                   ))}
-                </ul>
+                </div>
               </div>
             )}
-            <div className="mb-4">
-              <span className="text-sm text-gray-500">Weight: {product.weight || 'N/A'}</span>
-              <span className="ml-4 text-sm text-gray-500">Dimensions: {product.dimensions || 'N/A'}</span>
+            
+            {/* Weight and Dimensions - IMPROVED */}
+            <div className="mb-4 bg-gray-50 p-3 rounded-lg">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <span className="font-medium text-gray-700">Weight:</span>
+                  <span className="ml-2 text-gray-600">{product.weight || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">Dimensions:</span>
+                  <span className="ml-2 text-gray-600">{product.dimensions || 'N/A'}</span>
+                </div>
+              </div>
             </div>
-            <div className="mb-4">
-              <span className="text-sm text-gray-500">Warranty: {product.warranty || 'N/A'}</span>
+            
+            {/* Warranty - IMPROVED */}
+            <div className="mb-4 bg-blue-50 border border-blue-100 p-3 rounded-lg">
+              <span className="font-medium text-blue-900">Warranty:</span>
+              <span className="ml-2 text-blue-700">{product.warranty || 'N/A'}</span>
+            </div>
+            
+            {/* Quantity and Actions */}
+            <div className="mb-6">
+              <div className="flex items-center mb-4">
+                <label htmlFor="quantity" className="text-sm font-medium text-gray-700 mr-3">
+                  Quantity:
+                </label>
+                <div className="flex items-center border rounded-lg">
+                  <button
+                    type="button"
+                    onClick={() => handleQuantityChange(quantity - 1)}
+                    className="px-3 py-1 text-gray-600 hover:text-gray-800"
+                    disabled={quantity <= 1}
+                  >
+                    -
+                  </button>
+                  <span className="px-4 py-1 text-center min-w-[3rem]">{quantity}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleQuantityChange(quantity + 1)}
+                    className="px-3 py-1 text-gray-600 hover:text-gray-800"
+                    disabled={quantity >= 10}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={handleAddToCart}
+                  disabled={!product.inStock}
+                  className="flex-1 bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                >
+                  <ShoppingCart className="mr-2 h-5 w-5" />
+                  {product.inStock ? 'Add to Cart' : 'Out of Stock'}
+                </button>
+                
+                <WishlistButton productId={String(product._id || product.id)} />
+              </div>
             </div>
             {/* Back Button */}
             <div className="mt-8">
@@ -303,9 +436,8 @@ const ProductDetail: React.FC = () => {
         </div>
       </div>
       {/* User Reviews Section */}
-      <div className="max-w-4xl mx-auto mt-8 bg-white rounded-lg shadow-lg p-8">
+      <div className="max-w-7xl mx-auto mt-8 bg-white rounded-lg shadow-lg p-8">
         <h2 className="text-2xl font-bold mb-4">User Reviews</h2>
-        {/* Review Submission Form */}
         {user ? (
           <form
             className="mb-8"
@@ -327,7 +459,6 @@ const ProductDetail: React.FC = () => {
                 await reviewApi.addReview(productIdStr, userRating, comment);
                 setUserRating(null);
                 setComment('');
-                // Refetch reviews
                 const productIdNum = typeof product.id === 'number' ? product.id : Number(product.id || product._id);
                 const data = await reviewApi.getProductReviews(productIdNum);
                 setReviews(data);
@@ -348,7 +479,7 @@ const ProductDetail: React.FC = () => {
                   className="focus:outline-none"
                   aria-label={`Rate ${i + 1} stars`}
                 >
-                  <Star className={`h-5 w-5 ${userRating !== null ? i < userRating : false ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
+                  <Star className={`h-5 w-5 ${userRating !== null && i < userRating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
                 </button>
               ))}
             </div>
@@ -372,7 +503,6 @@ const ProductDetail: React.FC = () => {
         ) : (
           <div className="mb-8 text-gray-500">Log in to submit a review.</div>
         )}
-        {/* Reviews List */}
         {reviewsLoading ? (
           <div>Loading reviews...</div>
         ) : reviews.length === 0 ? (

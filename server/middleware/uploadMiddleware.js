@@ -1,13 +1,23 @@
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 
 // Set storage engine
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, path.join(__dirname, '../uploads/product-images'));
+    const uploadDir = path.join(__dirname, '../uploads/product-images');
+    
+    // Create directory if it doesn't exist
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    
+    cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
-    cb(null, Date.now() + '-' + file.originalname.replace(/\s+/g, '_'));
+    // Clean filename to avoid issues with special characters
+    const cleanFilename = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+    cb(null, Date.now() + '-' + cleanFilename);
   }
 });
 

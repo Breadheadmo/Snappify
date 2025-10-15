@@ -7,9 +7,17 @@ import { useCart } from '../contexts/CartContext';
 import { productApi } from '../services/api';
 import ChargersImage from '../assets/images/Chargers.jpg';
 import AudioImage from '../assets/images/Audio.jpg';
+import bannerUrl from '../assets/images/banner.png';
+import CircularGalleryDemo from '../components/ui/circular-gallery-demo';
+import { CircularGallery, type GalleryItem } from '../components/ui/circular-gallery';
+import PopularCarousel from '../components/PopularCarousel';
+
+// Using a static import for the banner ensures the bundler includes the asset
+// and avoids dynamic require issues. Update the file at bannerUrl to change the hero.
 
 const Home: React.FC = () => {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [popularProducts, setPopularProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const { addToCart } = useCart();
 
@@ -23,6 +31,8 @@ const Home: React.FC = () => {
         // Take first 4 products as featured
         const featured = result.products.slice(0, 4);
         setFeaturedProducts(featured);
+        const popular = result.products.slice(0, 10);
+        setPopularProducts(popular);
       } catch (error) {
         console.error('Error loading featured products:', error);
         // If API fails, we could fallback to mock data, but let's show empty for now
@@ -85,9 +95,10 @@ const Home: React.FC = () => {
   return (
     <div className="min-h-screen">
       {/* Hero Section with Parallax */}
-      <section className="parallax bg-gradient-to-r from-primary-600 to-primary-800 text-white py-20 relative overflow-hidden" style={{
-        backgroundImage: 'url("https://images.unsplash.com/photo-1518709268805-4e9042af2176?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1920&q=80")'
-      }}>
+      <section
+        className="parallax text-white py-20 relative overflow-hidden"
+        style={{ backgroundImage: `url('${bannerUrl}')` }}
+      >
         {/* Particle effects */}
         <div className="absolute inset-0">
           {[...Array(20)].map((_, i) => (
@@ -106,8 +117,8 @@ const Home: React.FC = () => {
           ))}
         </div>
         
-        <div className="absolute inset-0 bg-black bg-opacity-40"></div>
-        <div className="absolute inset-0 bg-gradient-to-r from-primary-600/80 to-primary-800/80"></div>
+        {/* Subtle dark overlay to improve text contrast without hiding the image */}
+        <div className="absolute inset-0 bg-black/30"></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center">
             <h1 className="text-4xl md:text-6xl font-bold mb-6 float-animation text-reveal">
@@ -135,6 +146,35 @@ const Home: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* Circular Gallery Showcase (Product images) */}
+      <section className="py-12 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">Discover The Vibe</h2>
+          <div className="w-full h-[600px]">
+            {popularProducts.length > 0 ? (
+              <CircularGallery
+                items={popularProducts.map((p): GalleryItem => ({
+                  common: p.name,
+                  binomial: p.category || p.brand,
+                  photo: {
+                    url: (p.images && p.images[0]) || p.image || 'https://via.placeholder.com/600x600?text=Product',
+                    text: p.name,
+                    by: p.brand || 'Snappify',
+                  },
+                }))}
+                radius={600}
+                autoRotateSpeed={0.02}
+              />
+            ) : (
+              <CircularGalleryDemo />
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Popular Carousel */}
+      <PopularCarousel products={popularProducts} autoPlayMs={2000} />
 
       {/* Features Section */}
       <section className="py-16 bg-white">

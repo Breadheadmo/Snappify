@@ -71,6 +71,9 @@ app.use('/api/payments', require('./routes/paymentRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/tracking', require('./routes/trackingRoutes'));
 app.use('/api/email-test', require('./routes/emailTest'));
+app.use('/api/recommendations', require('./routes/recommendationRoutes'));
+app.use('/api/stock-alerts', require('./routes/stockAlertRoutes'));
+app.use('/api/bulk', require('./routes/bulkRoutes'));
 
 // Set static folder in production
 if (process.env.NODE_ENV === 'production') {

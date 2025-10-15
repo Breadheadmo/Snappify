@@ -7,6 +7,14 @@ const {
   updateProduct,
   deleteProduct,
   createProductReview,
+  updateProductReview,
+  deleteProductReview,
+  markReviewHelpful,
+  getProductReviews,
+  addProductVariant,
+  updateProductVariant,
+  deleteProductVariant,
+  getProductVariants,
   getTopProducts,
   getProductCategories,
   getProductBrands,
@@ -28,7 +36,25 @@ router.route('/:id')
   .put(protect, admin, upload.array('images[]', 10), updateProduct)
   .delete(protect, admin, deleteProduct);
 
+// Review routes
 router.route('/:id/reviews')
+  .get(getProductReviews)
   .post(protect, createProductReview);
+
+router.route('/:id/reviews/:reviewId')
+  .put(protect, updateProductReview)
+  .delete(protect, deleteProductReview);
+
+router.route('/:id/reviews/:reviewId/helpful')
+  .put(protect, markReviewHelpful);
+
+// Variant routes
+router.route('/:id/variants')
+  .get(getProductVariants)
+  .post(protect, admin, addProductVariant);
+
+router.route('/:id/variants/:variantId')
+  .put(protect, admin, updateProductVariant)
+  .delete(protect, admin, deleteProductVariant);
 
 module.exports = router;

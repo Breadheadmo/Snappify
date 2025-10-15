@@ -6,29 +6,42 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        shimmerBlack: {
+          50: '#f0f0f0',    /* Very light gray for subtle contrast */
+          100: '#e0e0e0',   /* Lighter gray */
+          200: '#c0c0c0',   /* Light gray */
+          300: '#a0a0a0',   /* Medium light gray */
+          400: '#808080',   /* Medium gray */
+          500: '#606060',   /* Darker gray */
+          600: '#404040',   /* Dark gray */
+          700: '#202020',   /* Very dark gray */
+          800: '#1a1a1a',   /* Near black */
+          900: '#0a0a0a',   /* Almost black */
+          950: '#000000',   /* Pure black */
+        },
         primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
+          50: '#f0f0f0',
+          100: '#e0e0e0',
+          200: '#c0c0c0',
+          300: '#a0a0a0',
+          400: '#808080',
+          500: '#606060',
+          600: '#404040',
+          700: '#202020',
+          800: '#1a1a1a',
+          900: '#0a0a0a',
         },
         secondary: {
-          50: '#f8fafc',
-          100: '#f1f5f9',
-          200: '#e2e8f0',
-          300: '#cbd5e1',
-          400: '#94a3b8',
-          500: '#64748b',
-          600: '#475569',
-          700: '#334155',
-          800: '#1e293b',
-          900: '#0f172a',
+          50: '#ffffff', /* White for secondary background elements */
+          100: '#f8f8f8',
+          200: '#f0f0f0',
+          300: '#e8e8e8',
+          400: '#e0e0e0',
+          500: '#d8d8d8',
+          600: '#d0d0d0',
+          700: '#c8c8c8',
+          800: '#c0c0c0',
+          900: '#b8b8b8',
         }
       },
       fontFamily: {

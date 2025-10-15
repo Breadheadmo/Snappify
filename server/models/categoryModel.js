@@ -27,6 +27,16 @@ const categorySchema = mongoose.Schema(
       ref: 'Category',
       default: null,
     },
+    children: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Category',
+      },
+    ],
+    level: {
+      type: Number,
+      default: 0, // 0 = root, 1 = subcategory, etc.
+    },
     isActive: {
       type: Boolean,
       default: true,
@@ -45,6 +55,17 @@ const categorySchema = mongoose.Schema(
       type: Number,
       default: 0,
     },
+    // Display settings
+    showInMenu: {
+      type: Boolean,
+      default: true,
+    },
+    icon: {
+      type: String, // For FontAwesome or other icon classes
+    },
+    color: {
+      type: String, // Hex color for category theming
+    },
   },
   {
     timestamps: true,
@@ -55,6 +76,8 @@ const categorySchema = mongoose.Schema(
 categorySchema.index({ name: 1 });
 categorySchema.index({ slug: 1 });
 categorySchema.index({ parent: 1 });
+categorySchema.index({ level: 1 });
+categorySchema.index({ isActive: 1 });
 
 // Pre-save middleware to generate slug
 categorySchema.pre('save', function (next) {

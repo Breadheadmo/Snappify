@@ -8,14 +8,57 @@ import { useWishlist } from '../contexts/WishlistContext';
 interface ProductCardProps {
   product: Product;
   onAddToCart: (product: Product) => void;
+  disableButtonAnimation?: boolean;
 }
 
-const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
+const ProductCard = ({ product, onAddToCart, disableButtonAnimation }: ProductCardProps) => {
   const [isVisible, setIsVisible] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const { isInCart } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
+
+  // Helper function to parse features from JSON string or array
+  const parseFeatures = (features: any): string[] => {
+    if (!features) return [];
+    
+    if (typeof features === 'string') {
+      try {
+        // Parse JSON string
+        const parsed = JSON.parse(features);
+        if (Array.isArray(parsed)) {
+          // Clean each feature: remove escape characters, quotes, brackets
+          return parsed.map(f => 
+            String(f)
+              .replace(/^\["|"\]$/g, '') // Remove leading/trailing ["..."]
+              .replace(/\\"/g, '"')       // Remove escape slashes
+              .replace(/^["']|["']$/g, '') // Remove quotes
+              .trim()
+          ).filter(f => f.length > 0);
+        }
+        return [String(parsed)];
+      } catch {
+        // If parsing fails, treat as comma/semicolon separated string
+        return features
+          .split(/[,;\n]/)
+          .map((f: string) => f.trim().replace(/^["']|["']$/g, ''))
+          .filter((f: string) => f.length > 0);
+      }
+    }
+    
+    if (Array.isArray(features)) {
+      return features.map(f => 
+        String(f)
+          .replace(/\\"/g, '"')
+          .replace(/^["']|["']$/g, '')
+          .trim()
+      ).filter(f => f.length > 0);
+    }
+    
+    return [];
+  };
+
+  const displayFeatures = parseFeatures(product.features);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -53,7 +96,6 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
     toggleWishlist(product);
   };
 
-  // Use first image from images array, fallback to placeholder
   const mainImage = product.images && product.images.length > 0 && product.images[0]
     ? product.images[0]
     : 'https://via.placeholder.com/300x200?text=Product+Image';
@@ -68,7 +110,6 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
       }}
     >
       <div className="relative overflow-hidden rounded-t-xl image-zoom">
-        {/* Shimmer effect while loading */}
         <div className={`absolute inset-0 z-10 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 animate-shimmer rounded-t-xl ${imageLoaded ? 'opacity-0' : 'opacity-100'} transition-opacity duration-700`}></div>
         <img
           src={mainImage}
@@ -84,26 +125,22 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
           }}
         />
         
-        {/* Discount Badge */}
         {product.discount && (
           <div className="absolute top-2 left-2 bg-gradient-to-r from-red-500 to-pink-500 text-white px-2 py-1 rounded-full text-xs font-bold shadow-lg animate-bounce">
             {product.discount}% OFF
           </div>
         )}
         
-        {/* Stock Status */}
         {!product.inStock && (
           <div className="absolute top-2 right-2 bg-gradient-to-r from-gray-700 to-red-500 text-white px-2 py-1 rounded-full text-xs font-bold shadow-lg animate-pulse">
             Out of Stock
           </div>
         )}
         
-        {/* Category Badge */}
         <div className="absolute bottom-2 left-2 bg-primary-600/90 text-white px-2 py-1 rounded-full text-xs font-semibold shadow-md animate-fade-in">
           {product.category}
         </div>
         
-        {/* Wishlist Button */}
         <button
           onClick={handleWishlistToggle}
           className={`absolute top-2 right-2 p-2 rounded-full shadow-md transition-all duration-300 hover:scale-110 ${
@@ -119,17 +156,14 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
           />
         </button>
         
-        {/* Gradient Overlay */}
-  <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
       </div>
       
-  <div className="p-4 animate-fade-in">
-        {/* Brand */}
+      <div className="p-4 animate-fade-in">
         {product.brand && (
           <div className="text-xs text-gray-500 mb-1">{product.brand}</div>
         )}
         
-        {/* Product Name */}
         <Link to={`/products/${product.id}`}>
           <h3 className="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors line-clamp-2 mb-2">
             <span className="transition-colors duration-300 group-hover:text-primary-600 group-hover:underline">
@@ -138,7 +172,6 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
           </h3>
         </Link>
         
-        {/* Rating and Reviews */}
         <div className="flex items-center mb-2">
           <div className="flex items-center mr-2 star-rating">
             {renderStars(product.rating)}
@@ -148,7 +181,6 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
           </span>
         </div>
         
-        {/* Price Section */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <span className="text-2xl font-bold text-gray-900 price-tag">
@@ -164,35 +196,49 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
           </div>
         </div>
         
-        {/* Features Preview */}
-        {product.features.length > 0 && (
-          <div className="mb-3">
-            <div className="flex flex-wrap gap-1">
-              {product.features.slice(0, 2).map((feature, index) => (
-                <span
+        {/* Features Preview - COMPLETELY FIXED */}
+        {displayFeatures.length > 0 && (
+          <div className="mb-3 min-h-[60px]">
+            <ul className="space-y-1">
+              {displayFeatures.slice(0, 2).map((feature, index) => (
+                <li
                   key={index}
-                  className="text-xs bg-primary-50 text-primary-700 px-2 py-1 rounded shadow-sm animate-fade-in"
+                  className="text-xs text-gray-600 flex items-start leading-relaxed"
+                  title={feature}
                 >
-                  {feature}
-                </span>
+                  <span className="text-primary-600 mr-1 flex-shrink-0">•</span>
+                  <span className="line-clamp-1">{feature}</span>
+                </li>
               ))}
-              {product.features.length > 2 && (
-                <span className="text-xs text-gray-500">
-                  +{product.features.length - 2} more
-                </span>
-              )}
-            </div>
+            </ul>
+            {displayFeatures.length > 2 && (
+              <p className="text-xs text-gray-400 mt-1">
+                +{displayFeatures.length - 2} more features
+              </p>
+            )}
           </div>
         )}
         
-        {/* Add to Cart Button */}
         <button
-          onClick={() => onAddToCart(product)}
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onAddToCart(product);
+          }}
           disabled={!product.inStock}
           className={`w-full py-2 px-4 rounded-lg font-medium transition-all duration-300 cart-btn-pulse shadow-md ${
             product.inStock
-              ? 'bg-primary-600 hover:bg-primary-700 text-white hover:scale-105 animate-bounce'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed animate-pulse'
+              ? (
+                  disableButtonAnimation
+                    ? 'bg-primary-600 hover:bg-primary-700 text-white'
+                    : 'bg-primary-600 hover:bg-primary-700 text-white hover:scale-105 animate-bounce'
+                )
+              : (
+                  disableButtonAnimation
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed animate-pulse'
+                )
           }`}
         >
           <div className="flex items-center justify-center space-x-2">

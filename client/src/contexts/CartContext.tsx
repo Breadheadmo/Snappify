@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+// ...existing code...
+import React, { createContext, useContext, useReducer, useEffect, ReactNode, useCallback } from 'react';
 import type { Product, CartItem } from '../types/Product';
 import { cartApi } from '../services/api';
 import { useAuth } from './AuthContext';
@@ -18,6 +19,8 @@ type CartAction =
   | { type: 'LOAD_CART'; payload: CartItem[] }
   | { type: 'SET_LOADING'; payload: boolean };
 
+const LOCAL_KEY = 'cart'; // keep same key used elsewhere
+
 const CartContext = createContext<{
   state: CartState;
   addToCart: (product: Product, quantity?: number) => Promise<void>;
@@ -27,31 +30,33 @@ const CartContext = createContext<{
   isInCart: (productId: string) => boolean;
   getCartItem: (productId: string) => CartItem | undefined;
   refreshCart: () => Promise<void>;
+  mergeLocalCartToServer: (options?: { apiUrl?: string; token?: string }) => Promise<void>;
+  setCartFromServer: (items: CartItem[]) => void;
 } | undefined>(undefined);
 
 const cartReducer = (state: CartState, action: CartAction): CartState => {
   console.log('🔄 Cart reducer action:', action.type, action);
-  
+
   switch (action.type) {
     case 'ADD_ITEM': {
       const existingItem = state.items.find(item => item.product.id === action.payload.id);
       console.log('🔍 Existing item found:', !!existingItem);
-      
+
       if (existingItem) {
         const newQuantity = existingItem.quantity + (action.quantity || 1);
         console.log(`📈 Updating quantity from ${existingItem.quantity} to ${newQuantity}`);
-        
+
         const updatedItems = state.items.map(item =>
           item.product.id === action.payload.id
             ? { ...item, quantity: newQuantity }
             : item
         );
-        
+
         const newTotal = updatedItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
         const newItemCount = updatedItems.reduce((sum, item) => sum + item.quantity, 0);
-        
+
         console.log(`📊 Updated totals: ${newItemCount} items, $${newTotal.toFixed(2)}`);
-        
+
         return {
           ...state,
           items: updatedItems,
@@ -63,15 +68,15 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
           product: action.payload,
           quantity: action.quantity || 1
         };
-        
+
         console.log(`➕ Adding new item: ${newItem.product.name} (qty: ${newItem.quantity})`);
-        
+
         const newItems = [...state.items, newItem];
         const newTotal = newItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
         const newItemCount = newItems.reduce((sum, item) => sum + item.quantity, 0);
-        
+
         console.log(`📊 New totals: ${newItemCount} items, $${newTotal.toFixed(2)}`);
-        
+
         return {
           ...state,
           items: newItems,
@@ -80,10 +85,10 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
         };
       }
     }
-    
+
     case 'REMOVE_ITEM': {
       const updatedItems = state.items.filter(item => item.product.id.toString() !== action.payload.toString());
-      
+
       return {
         ...state,
         items: updatedItems,
@@ -91,14 +96,14 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
         itemCount: updatedItems.reduce((sum, item) => sum + item.quantity, 0)
       };
     }
-    
+
     case 'UPDATE_QUANTITY': {
       const updatedItems = state.items.map(item =>
         item.product.id.toString() === action.payload.productId.toString()
           ? { ...item, quantity: action.payload.quantity }
           : item
       );
-      
+
       return {
         ...state,
         items: updatedItems,
@@ -106,7 +111,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
         itemCount: updatedItems.reduce((sum, item) => sum + item.quantity, 0)
       };
     }
-    
+
     case 'CLEAR_CART': {
       return {
         ...state,
@@ -115,10 +120,10 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
         itemCount: 0
       };
     }
-    
+
     case 'LOAD_CART': {
       const items = action.payload;
-      
+
       return {
         ...state,
         items,
@@ -127,14 +132,14 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
         loading: false
       };
     }
-    
+
     case 'SET_LOADING': {
       return {
         ...state,
         loading: action.payload
       };
     }
-    
+
     default:
       return state;
   }
@@ -196,7 +201,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       } else {
         // Use localStorage for guest users
         console.log('💾 Loading cart from localStorage for guest user');
-        const savedCart = localStorage.getItem('cart');
+        const savedCart = localStorage.getItem(LOCAL_KEY);
         console.log('📥 Raw localStorage cart:', savedCart);
         if (savedCart) {
           try {
@@ -217,7 +222,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // For unauthenticated users, fall back to localStorage
       if (!isAuthenticated) {
         try {
-          const savedCart = localStorage.getItem('cart');
+          const savedCart = localStorage.getItem(LOCAL_KEY);
           const parsedCart = savedCart ? JSON.parse(savedCart) : [];
           console.log('🔄 Fallback to localStorage:', parsedCart);
           dispatch({ type: 'LOAD_CART', payload: parsedCart });
@@ -242,8 +247,12 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     if (!isAuthenticated && !state.loading) {
       console.log('💾 Saving cart to localStorage for guest user:', state.items);
-      localStorage.setItem('cart', JSON.stringify(state.items));
-      console.log('✅ Cart saved to localStorage');
+      try {
+        localStorage.setItem(LOCAL_KEY, JSON.stringify(state.items));
+        console.log('✅ Cart saved to localStorage');
+      } catch (err) {
+        console.error('❌ Failed to save cart to localStorage', err);
+      }
     }
   }, [state.items, isAuthenticated, state.loading]);
 
@@ -256,13 +265,13 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       console.log(`🛒 Adding ${quantity} of product "${product.name}" (ID: ${product.id}) to cart`);
       console.log('🔐 Authenticated:', isAuthenticated);
-      
+
       if (isAuthenticated) {
         // For authenticated users, call API first, then update UI based on response
         console.log(`📡 Calling API to add product ${product.id} to cart`);
         const response = await cartApi.addToCart(product.id.toString(), quantity);
         console.log('✅ Cart API response:', response);
-        
+
         // Refresh cart from server to get the correct state
         await loadCart();
       } else {
@@ -273,7 +282,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     } catch (error) {
       console.error('❌ Error adding to cart:', error);
-      
+
       // If there's an error and user is authenticated, reload cart from server
       if (isAuthenticated) {
         console.log('🔄 Reloading cart from server due to error');
@@ -283,7 +292,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.log('🔄 Fallback: Adding to local state for guest user');
         dispatch({ type: 'ADD_ITEM', payload: product, quantity });
       }
-      
+
       // Don't re-throw the error for guest users, only for authenticated users
       if (isAuthenticated) {
         throw error;
@@ -294,7 +303,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const removeFromCart = async (productId: string) => {
     // Optimistically update the UI
     dispatch({ type: 'REMOVE_ITEM', payload: productId });
-    
+
     try {
       if (isAuthenticated) {
         // Call API to remove from cart if user is authenticated
@@ -315,7 +324,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Optimistically update the UI
     dispatch({ type: 'UPDATE_QUANTITY', payload: { productId, quantity } });
-    
+
     try {
       if (isAuthenticated) {
         // Call API to update cart if user is authenticated
@@ -331,18 +340,86 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const clearCart = async () => {
     // Optimistically update the UI
     dispatch({ type: 'CLEAR_CART' });
-    
+
     try {
       if (isAuthenticated) {
         // Call API to clear cart if user is authenticated
         await cartApi.clearCart();
       }
+      // clear local storage as well
+      try { localStorage.removeItem(LOCAL_KEY); } catch {}
     } catch (error) {
       console.error('Error clearing cart:', error);
       // Reload cart to get correct state in case of error
       await loadCart();
     }
   };
+
+  const mergeLocalCartToServer = useCallback(async (options?: { apiUrl?: string; token?: string }) => {
+    // Read local cart (items format: CartItem[])
+    const raw = localStorage.getItem(LOCAL_KEY);
+    if (!raw) return;
+    let localItems: CartItem[];
+    try {
+      localItems = JSON.parse(raw) as CartItem[];
+    } catch (err) {
+      console.error('❌ Failed parsing local cart for merge:', err);
+      return;
+    }
+    if (!localItems || localItems.length === 0) return;
+
+    // Try cartApi.mergeCart if available
+    try {
+      if (cartApi && typeof (cartApi as any).mergeCart === 'function') {
+        const merged = await (cartApi as any).mergeCart(localItems);
+        console.log('📦 Merged cart response from API:', merged);
+        // If server returns cart items, load them
+        if (merged && Array.isArray(merged.items)) {
+          const formatted = formatCartItems(merged.items);
+          dispatch({ type: 'LOAD_CART', payload: formatted });
+          try { localStorage.removeItem(LOCAL_KEY); } catch {}
+        } else {
+          // refresh from server
+          await loadCart();
+          try { localStorage.removeItem(LOCAL_KEY); } catch {}
+        }
+        return;
+      }
+
+      // Fallback: call /cart/merge endpoint directly if REACT_APP_API_URL provided
+      const apiUrl = options?.apiUrl ?? process.env.REACT_APP_API_URL;
+      if (!apiUrl) return;
+      const resp = await fetch(`${apiUrl.replace(/\/$/, '')}/cart/merge`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(options?.token ? { Authorization: `Bearer ${options.token}` } : {}),
+        },
+        body: JSON.stringify({ items: localItems.map(it => ({ productId: it.product.id, quantity: it.quantity })) }),
+      });
+      if (!resp.ok) {
+        console.warn('⚠️ Merge request failed:', resp.status);
+        return;
+      }
+      const result = await resp.json();
+      if (result && Array.isArray(result.items)) {
+        const formatted = formatCartItems(result.items);
+        dispatch({ type: 'LOAD_CART', payload: formatted });
+        try { localStorage.removeItem(LOCAL_KEY); } catch {}
+      } else {
+        await loadCart();
+        try { localStorage.removeItem(LOCAL_KEY); } catch {}
+      }
+    } catch (err) {
+      console.error('❌ Error merging local cart to server:', err);
+    }
+  }, [loadCart]);
+
+  const setCartFromServer = useCallback((items: CartItem[]) => {
+    dispatch({ type: 'LOAD_CART', payload: items });
+    try { localStorage.removeItem(LOCAL_KEY); } catch {}
+  }, []);
 
   const isInCart = (productId: string): boolean => {
     return state.items.some(item => item.product.id.toString() === productId.toString());
@@ -360,7 +437,9 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     clearCart,
     isInCart,
     getCartItem,
-    refreshCart
+    refreshCart,
+    mergeLocalCartToServer,
+    setCartFromServer
   };
 
   return (
