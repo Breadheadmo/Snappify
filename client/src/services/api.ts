@@ -495,7 +495,7 @@ export const productApi = {
     try {
 
       // For production, use real API
-      const response = await fetch(`${API_BASE_URL}/products/categories`);
+      const response = await fetch(`${API_BASE_URL}/categories`);
       return handleResponse(response);
     } catch (error) {
       console.error('Error fetching categories:', error);

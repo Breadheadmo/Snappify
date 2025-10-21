@@ -56,13 +56,6 @@ const initialState: SearchState = {
 
 // Helper function to filter products based on search criteria
 const filterProductsByCriteria = (filters: Omit<SearchState, 'results' | 'totalResults' | 'isLoading'>): Product[] => {
-  // Use the results from the context state for filtering
-  // If this is inside getFilteredProducts, use 'state.results'.
-  // If inside filterProductsByCriteria, use 'filters.results' or pass results as argument.
-  // For getFilteredProducts, use:
-  // Accept products as an argument for filtering
-  // Usage: filterProductsByCriteria(filters, products)
-  // Remove reference to 'state.results' here
   let filtered: Product[] = [];
 
   // Filter by query (search in name, description, and tags)
@@ -71,7 +64,7 @@ const filterProductsByCriteria = (filters: Omit<SearchState, 'results' | 'totalR
     filtered = filtered.filter(product =>
       product.name.toLowerCase().includes(query) ||
       product.description.toLowerCase().includes(query) ||
-  product.tags.some((tag: string) => tag.toLowerCase().includes(query)) ||
+      (product.tags ?? []).some((tag: string) => tag.toLowerCase().includes(query)) || // ✅ PATCHED
       product.brand.toLowerCase().includes(query)
     );
   }
@@ -122,7 +115,7 @@ const sortProductsByCriteria = (products: Product[], sortBy: string): Product[] 
       return sorted.sort((a, b) => b.reviews - a.reviews);
     
     case 'newest':
-  return sorted.sort((a, b) => Number(b.id) - Number(a.id));
+      return sorted.sort((a, b) => Number(b.id) - Number(a.id));
     
     case 'name-asc':
       return sorted.sort((a, b) => a.name.localeCompare(b.name));
@@ -269,8 +262,7 @@ export const SearchProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
   const getFilteredProducts = (): Product[] => {
     // Use backend-fetched products for filtering, not mockProducts
-  // Use the local state variable from the SearchProvider context
-  let filtered = [...state.results];
+    let filtered = [...state.results];
 
     // Filter by query (search in name, description, and tags)
     if (state.query) {
@@ -278,7 +270,7 @@ export const SearchProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       filtered = filtered.filter(product =>
         product.name.toLowerCase().includes(query) ||
         product.description.toLowerCase().includes(query) ||
-        (product.tags && product.tags.some(tag => tag.toLowerCase().includes(query))) ||
+        (product.tags ?? []).some(tag => tag.toLowerCase().includes(query)) || // ✅ PATCHED
         product.brand.toLowerCase().includes(query)
       );
     }

@@ -16,6 +16,7 @@ import { productApi, reviewApi } from '../services/api';
 import { transformBackendProduct } from '../services/api';
 import { Star, ShoppingCart, ArrowLeft, Check } from 'lucide-react';
 import type { Product } from '../types/Product';
+import type { Category } from '../types'; // 🆕 ADDED
 import WishlistButton from '../components/wishlist/WishlistButton';
 
 interface Review {
@@ -44,6 +45,55 @@ const ProductDetail: React.FC = () => {
   const [ratingError, setRatingError] = useState<string | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(true);
+
+  // ============================================
+  // 🆕 HELPER FUNCTIONS FOR CATEGORY HANDLING
+  // ============================================
+
+  /**
+   * Safely extract category name from string or Category object
+   */
+  const getCategoryName = (category: string | Category | undefined): string => {
+    if (!category) return 'Uncategorized';
+    
+    // If it's a string, return it directly
+    if (typeof category === 'string') return category;
+    
+    // If it's a Category object, return its name property
+    return category.name || 'Uncategorized';
+  };
+
+  /**
+   * Get category slug for URL generation
+   */
+  const getCategorySlug = (category: string | Category | undefined): string => {
+    if (!category) return '';
+    
+    // If it's a string, convert to slug format
+    if (typeof category === 'string') {
+      return category.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    }
+    
+    // If it's a Category object, return its slug
+    return category.slug || '';
+  };
+
+  /**
+   * Get category ID for linking
+   */
+  const getCategoryId = (category: string | Category | undefined): string => {
+    if (!category) return '';
+    
+    // If it's a string, return empty (no ID available)
+    if (typeof category === 'string') return '';
+    
+    // If it's a Category object, return its _id
+    return category._id || '';
+  };
+
+  // ============================================
+  // EXISTING HELPER FUNCTIONS
+  // ============================================
 
   // Helper functions to parse JSON data
   const parseFeatures = (features: any): string[] => {
@@ -86,6 +136,10 @@ const ProductDetail: React.FC = () => {
     setCurrentImageIdx(idx => (images.length > 0 ? (idx === images.length - 1 ? 0 : idx + 1) : 0));
   };
 
+  // ============================================
+  // USE EFFECTS
+  // ============================================
+
   useEffect(() => {
     const fetchProduct = async () => {
       if (!id) {
@@ -125,6 +179,10 @@ const ProductDetail: React.FC = () => {
     };
     fetchReviews();
   }, [id]);
+
+  // ============================================
+  // EVENT HANDLERS
+  // ============================================
 
   const handleAddToCart = () => {
     if (!product) {
@@ -171,6 +229,10 @@ const ProductDetail: React.FC = () => {
     }
   };
 
+  // ============================================
+  // RENDER CONDITIONS
+  // ============================================
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
@@ -193,8 +255,38 @@ const ProductDetail: React.FC = () => {
   const features = parseFeatures(product.features);
   const specifications = parseSpecifications(product.specifications);
 
+  // ============================================
+  // MAIN RENDER
+  // ============================================
+
   return (
     <div className="min-h-screen bg-gray-50 py-10">
+      {/* 🆕 BREADCRUMB NAVIGATION */}
+      <div className="max-w-7xl mx-auto px-4 mb-4">
+        <nav className="flex items-center space-x-2 text-sm text-gray-600">
+          <Link to="/" className="hover:text-primary-600 transition-colors">
+            Home
+          </Link>
+          <span>/</span>
+          <Link to="/products" className="hover:text-primary-600 transition-colors">
+            Products
+          </Link>
+          {product.category && (
+            <>
+              <span>/</span>
+              <Link 
+                to={`/products?category=${encodeURIComponent(getCategoryName(product.category))}`}
+                className="hover:text-primary-600 transition-colors"
+              >
+                {getCategoryName(product.category)}
+              </Link>
+            </>
+          )}
+          <span>/</span>
+          <span className="text-gray-900 font-medium truncate max-w-xs">{product.name}</span>
+        </nav>
+      </div>
+
       <div className="max-w-7xl mx-auto bg-white rounded-lg shadow-lg p-8 flex flex-col lg:flex-row gap-8">
         <div className="flex-1 flex flex-col items-center justify-center relative">
           <Carousel className="w-full max-w-md">
@@ -300,7 +392,13 @@ const ProductDetail: React.FC = () => {
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
             <div className="flex items-center mb-2">
-              <span className="text-sm bg-primary-100 text-primary-800 px-2 py-1 rounded-full mr-2">{product.category}</span>
+              {/* 🔧 FIXED: Category display with helper function */}
+              <Link 
+                to={`/products?category=${encodeURIComponent(getCategoryName(product.category))}`}
+                className="text-sm bg-primary-100 text-primary-800 px-2 py-1 rounded-full mr-2 hover:bg-primary-200 transition-colors inline-block"
+              >
+                {getCategoryName(product.category)}
+              </Link>
               <span className="text-sm text-gray-500">Brand: {product.brand}</span>
             </div>
             <div className="flex items-center mb-2">
@@ -328,7 +426,7 @@ const ProductDetail: React.FC = () => {
             </div>
             <p className="text-gray-700 mb-4 leading-relaxed">{product.description}</p>
             
-            {/* Features Section - IMPROVED */}
+            {/* Features Section */}
             {features.length > 0 && (
               <div className="mb-6 bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-xl border border-blue-100">
                 <h3 className="text-lg font-bold mb-3 text-gray-800 flex items-center">
@@ -350,7 +448,7 @@ const ProductDetail: React.FC = () => {
               </div>
             )}
             
-            {/* Specifications Section - FIXED */}
+            {/* Specifications Section */}
             {Object.keys(specifications).length > 0 && (
               <div className="mb-4">
                 <h3 className="font-semibold mb-2 text-lg text-gray-800">Specifications:</h3>
@@ -365,7 +463,7 @@ const ProductDetail: React.FC = () => {
               </div>
             )}
             
-            {/* Weight and Dimensions - IMPROVED */}
+            {/* Weight and Dimensions */}
             <div className="mb-4 bg-gray-50 p-3 rounded-lg">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
@@ -379,7 +477,7 @@ const ProductDetail: React.FC = () => {
               </div>
             </div>
             
-            {/* Warranty - IMPROVED */}
+            {/* Warranty */}
             <div className="mb-4 bg-blue-50 border border-blue-100 p-3 rounded-lg">
               <span className="font-medium text-blue-900">Warranty:</span>
               <span className="ml-2 text-blue-700">{product.warranty || 'N/A'}</span>

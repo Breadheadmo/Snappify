@@ -2,46 +2,33 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ErrorMessage from '../components/ErrorMessage';
+import { Order, OrderStatus } from '../types/Order';  // ADD THIS IMPORT
 
-interface TrackingStage {
-  key: string;
-  label: string;
-  description: string;
-}
+// Remove your old TrackingStage interface and use this mapping
+const statusToStageMapping: Record<OrderStatus, { label: string; description: string }> = {
+  [OrderStatus.PENDING]: { label: 'Processing', description: 'Order is being prepared' },
+  [OrderStatus.CONFIRMED]: { label: 'Confirmed', description: 'Order has been confirmed' },
+  [OrderStatus.PROCESSING]: { label: 'Preparing', description: 'Items are being packed' },
+  [OrderStatus.SHIPPED]: { label: 'Shipped', description: 'Package has left our facility' },
+  [OrderStatus.OUT_FOR_DELIVERY]: { label: 'Out for Delivery', description: 'Package is out for delivery' },
+  [OrderStatus.DELIVERED]: { label: 'Delivered', description: 'Package has been delivered' },
+  [OrderStatus.CANCELLED]: { label: 'Cancelled', description: 'Order was cancelled' },
+  [OrderStatus.RETURNED]: { label: 'Returned', description: 'Order was returned' },
+  [OrderStatus.REFUNDED]: { label: 'Refunded', description: 'Order was refunded' },
+};
 
-interface TrackingInfo {
-  trackingNumber: string;
-  carrier?: string;
-  currentStage: string;
-  estimatedDelivery?: string;
-  trackingUrl?: string;
-  orderStatus: string;
-  isDelivered: boolean;
-  deliveredAt?: string;
-  deliveredTo?: string;
-  createdAt: string;
-  totalItems?: number;
-  totalPrice?: number;
-  deliveryLocation?: {
-    city: string;
-    country: string;
-  };
-  shippingAddress?: any;
-}
-
-const trackingStages: TrackingStage[] = [
-  { key: 'processing', label: 'Processing', description: 'Order is being prepared' },
-  { key: 'confirmed', label: 'Confirmed', description: 'Order has been confirmed' },
-  { key: 'preparing', label: 'Preparing', description: 'Items are being packed' },
-  { key: 'shipped', label: 'Shipped', description: 'Package has left our facility' },
-  { key: 'in_transit', label: 'In Transit', description: 'Package is on its way' },
-  { key: 'out_for_delivery', label: 'Out for Delivery', description: 'Package is out for delivery' },
-  { key: 'delivered', label: 'Delivered', description: 'Package has been delivered' }
+const trackingStages: OrderStatus[] = [
+  OrderStatus.PENDING,
+  OrderStatus.CONFIRMED,
+  OrderStatus.PROCESSING,
+  OrderStatus.SHIPPED,
+  OrderStatus.OUT_FOR_DELIVERY,
+  OrderStatus.DELIVERED
 ];
 
 const OrderTracking: React.FC = () => {
   const { trackingNumber } = useParams<{ trackingNumber: string }>();
-  const [trackingInfo, setTrackingInfo] = useState<TrackingInfo | null>(null);
+  const [order, setOrder] = useState<Order | null>(null);  // Changed from trackingInfo
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -53,7 +40,7 @@ const OrderTracking: React.FC = () => {
         const data = await response.json();
 
         if (data.success) {
-          setTrackingInfo(data.data);
+          setOrder(data.data);  // Changed from setTrackingInfo
         } else {
           setError('Tracking number not found');
         }
@@ -69,11 +56,11 @@ const OrderTracking: React.FC = () => {
     }
   }, [trackingNumber]);
 
-  const getCurrentStageIndex = (currentStage: string): number => {
-    return trackingStages.findIndex(stage => stage.key === currentStage);
+  const getCurrentStageIndex = (currentStatus: OrderStatus): number => {
+    return trackingStages.findIndex(stage => stage === currentStatus);
   };
 
-  const formatDate = (dateString: string): string => {
+  const formatDate = (dateString: string | Date): string => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
@@ -85,9 +72,10 @@ const OrderTracking: React.FC = () => {
 
   if (loading) return <LoadingSpinner />;
   if (error) return <ErrorMessage message={error} />;
-  if (!trackingInfo) return <ErrorMessage message="No tracking information found" />;
+  if (!order) return <ErrorMessage message="No tracking information found" />;
 
-  const currentStageIndex = getCurrentStageIndex(trackingInfo.currentStage);
+  const currentStageIndex = getCurrentStageIndex(order.status);
+  const isDelivered = order.status === OrderStatus.DELIVERED;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -100,17 +88,22 @@ const OrderTracking: React.FC = () => {
                 Track Your Order
               </h1>
               <p className="text-gray-600 mt-1">
-                Tracking Number: <span className="font-semibold">{trackingInfo.trackingNumber}</span>
+                Order Number: <span className="font-semibold">{order.orderNumber}</span>
               </p>
+              {order.trackingNumber && (
+                <p className="text-gray-600 mt-1">
+                  Tracking Number: <span className="font-semibold">{order.trackingNumber}</span>
+                </p>
+              )}
             </div>
-            {trackingInfo.trackingUrl && (
+            {order.trackingUrl && order.carrier && (
               <a
-                href={trackingInfo.trackingUrl}
+                href={order.trackingUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
               >
-                Track on {trackingInfo.carrier}
+                Track on {order.carrier}
               </a>
             )}
           </div>
@@ -122,36 +115,30 @@ const OrderTracking: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <p className="text-sm text-gray-600">Order Date</p>
-              <p className="font-semibold">{formatDate(trackingInfo.createdAt)}</p>
+              <p className="font-semibold">{formatDate(order.createdAt)}</p>
             </div>
-            {trackingInfo.totalItems && (
-              <div>
-                <p className="text-sm text-gray-600">Items</p>
-                <p className="font-semibold">{trackingInfo.totalItems} item(s)</p>
-              </div>
-            )}
-            {trackingInfo.totalPrice && (
-              <div>
-                <p className="text-sm text-gray-600">Total</p>
-                <p className="font-semibold">R {trackingInfo.totalPrice.toFixed(2)}</p>
-              </div>
-            )}
+            <div>
+              <p className="text-sm text-gray-600">Items</p>
+              <p className="font-semibold">{order.items.length} item(s)</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Total</p>
+              <p className="font-semibold">R {order.total.toFixed(2)}</p>
+            </div>
           </div>
           
-          {trackingInfo.deliveryLocation && (
-            <div className="mt-4">
-              <p className="text-sm text-gray-600">Delivery Location</p>
-              <p className="font-semibold">
-                {trackingInfo.deliveryLocation.city}, {trackingInfo.deliveryLocation.country}
-              </p>
-            </div>
-          )}
+          <div className="mt-4">
+            <p className="text-sm text-gray-600">Delivery Location</p>
+            <p className="font-semibold">
+              {order.shippingAddress.city}, {order.shippingAddress.country}
+            </p>
+          </div>
 
-          {trackingInfo.estimatedDelivery && (
+          {order.estimatedDelivery && (
             <div className="mt-4">
               <p className="text-sm text-gray-600">Estimated Delivery</p>
               <p className="font-semibold text-green-600">
-                {formatDate(trackingInfo.estimatedDelivery)}
+                {formatDate(order.estimatedDelivery)}
               </p>
             </div>
           )}
@@ -174,9 +161,10 @@ const OrderTracking: React.FC = () => {
               {trackingStages.map((stage, index) => {
                 const isCompleted = index <= currentStageIndex;
                 const isCurrent = index === currentStageIndex;
+                const stageInfo = statusToStageMapping[stage];
                 
                 return (
-                  <div key={stage.key} className="relative flex items-center">
+                  <div key={stage} className="relative flex items-center">
                     {/* Circle */}
                     <div className={`relative z-10 w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
                       isCompleted 
@@ -195,7 +183,7 @@ const OrderTracking: React.FC = () => {
                     {/* Content */}
                     <div className="ml-4 flex-1">
                       <div className={`font-semibold ${isCurrent ? 'text-blue-600' : isCompleted ? 'text-gray-900' : 'text-gray-500'}`}>
-                        {stage.label}
+                        {stageInfo.label}
                         {isCurrent && (
                           <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                             Current
@@ -203,12 +191,11 @@ const OrderTracking: React.FC = () => {
                         )}
                       </div>
                       <p className={`text-sm ${isCompleted ? 'text-gray-600' : 'text-gray-400'}`}>
-                        {stage.description}
+                        {stageInfo.description}
                       </p>
-                      {stage.key === 'delivered' && trackingInfo.deliveredAt && isCompleted && (
+                      {stage === OrderStatus.DELIVERED && order.deliveredAt && isCompleted && (
                         <p className="text-sm text-green-600 mt-1">
-                          Delivered on {formatDate(trackingInfo.deliveredAt)}
-                          {trackingInfo.deliveredTo && ` to ${trackingInfo.deliveredTo}`}
+                          Delivered on {formatDate(order.deliveredAt)}
                         </p>
                       )}
                     </div>
@@ -219,30 +206,55 @@ const OrderTracking: React.FC = () => {
           </div>
         </div>
 
+        {/* Tracking Events History */}
+        {order.trackingEvents && order.trackingEvents.length > 0 && (
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Tracking History</h2>
+            <div className="space-y-3">
+              {order.trackingEvents.slice().reverse().map((event) => (
+                <div key={event.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                  <div className="flex-1">
+                    <p className="font-semibold text-gray-900">{event.description}</p>
+                    <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
+                      <span>{formatDate(event.timestamp)}</span>
+                      {event.location && (
+                        <>
+                          <span>•</span>
+                          <span>{event.location}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Status Card */}
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold text-gray-900">Current Status</h3>
               <p className="text-gray-600 mt-1">
-                {trackingStages[currentStageIndex]?.description || 'Processing your order'}
+                {statusToStageMapping[order.status]?.description || 'Processing your order'}
               </p>
             </div>
             <div className={`px-4 py-2 rounded-full text-sm font-medium ${
-              trackingInfo.isDelivered 
+              isDelivered 
                 ? 'bg-green-100 text-green-800'
                 : currentStageIndex >= 3
                 ? 'bg-blue-100 text-blue-800'
                 : 'bg-yellow-100 text-yellow-800'
             }`}>
-              {trackingInfo.isDelivered ? 'Delivered' : trackingStages[currentStageIndex]?.label || 'Processing'}
+              {statusToStageMapping[order.status]?.label || 'Processing'}
             </div>
           </div>
           
-          {trackingInfo.carrier && (
+          {order.carrier && (
             <div className="mt-4 pt-4 border-t border-gray-200">
               <p className="text-sm text-gray-600">
-                Carrier: <span className="font-semibold text-gray-900">{trackingInfo.carrier}</span>
+                Carrier: <span className="font-semibold text-gray-900">{order.carrier}</span>
               </p>
             </div>
           )}

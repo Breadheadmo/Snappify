@@ -9,7 +9,10 @@
     "test": "jest",
     "data:import": "node scripts/seedData.js",
     "data:destroy": "node scripts/seedData.js -d",
-    "build": "echo 'No build step required for pure Node.js backend.'"
+    "build": "echo 'No build step required for pure Node.js backend.'",
+    "check-categories": "node utils/check-categories.js",
+    "init-categories": "node scripts/init-categories.js",
+    "seed": "node scripts/seedData.js"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.3",

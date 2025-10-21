@@ -48,11 +48,9 @@ const Products: React.FC = () => {
   }, [searchParams]);
 
   const loadProducts = async (filters: any) => {
-    console.log('Loading products with filters:', filters);
     setLoading(true);
     try {
       const result = await productApi.getProducts(filters);
-      console.log('API Result:', result);
       setProducts(result.products || []);
       
       // Extract available tags and features from products
@@ -75,9 +73,7 @@ const Products: React.FC = () => {
   };
 
   const handleSearch = async (filters: any) => {
-    console.log('Search filters received:', filters);
     const searchFilters: any = {};
-    
     if (filters.query) searchFilters.search = filters.query;
     if (filters.category) searchFilters.category = filters.category;
     if (filters.brand) searchFilters.brand = filters.brand;
@@ -88,8 +84,6 @@ const Products: React.FC = () => {
     if (filters.features?.length > 0) searchFilters.features = filters.features.join(',');
     if (filters.inStock) searchFilters.inStock = 'true';
     if (filters.sortBy && filters.sortBy !== 'relevance') searchFilters.sortBy = filters.sortBy;
-    
-    console.log('Converted search filters:', searchFilters);
     await loadProducts(searchFilters);
   };
 
@@ -99,30 +93,31 @@ const Products: React.FC = () => {
       await refreshCart();
       showNotification('Item added to cart successfully!', 'success');
     } catch (error) {
-      console.error('Error adding to cart:', error);
       showNotification('Failed to add item to cart', 'error');
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Products</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Products</h1>
           <p className="text-gray-600 mb-6">Browse all available products in our store</p>
           
           {/* Advanced Search */}
-          <AdvancedSearch
-            categories={categories}
-            brands={brands}
-            availableTags={availableTags}
-            availableFeatures={availableFeatures}
-            onSearch={handleSearch}
-          />
+          <div className="w-full">
+            <AdvancedSearch
+              categories={categories}
+              brands={brands}
+              availableTags={availableTags}
+              availableFeatures={availableFeatures}
+              onSearch={handleSearch}
+            />
+          </div>
         </div>
         
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {[...Array(4)].map((_, index) => (
               <div key={index} className="animate-pulse">
                 <div className="skeleton h-48 rounded-t-xl mb-4"></div>
@@ -135,11 +130,11 @@ const Products: React.FC = () => {
             ))}
           </div>
         ) : products.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center text-gray-500">
+          <div className="flex flex-col items-center justify-center py-12 sm:py-16 text-center text-gray-500">
             <svg width="64" height="64" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="mx-auto mb-4 text-gray-300">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6 1a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <h3 className="text-xl font-semibold mb-2">No products found</h3>
+            <h3 className="text-lg sm:text-xl font-semibold mb-2">No products found</h3>
             <p className="mb-4">Try adjusting your filters or check back later.</p>
             <Link to="/" className="inline-flex items-center px-6 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">
               <ArrowRight className="mr-2 h-5 w-5" />
@@ -155,7 +150,7 @@ const Products: React.FC = () => {
               </p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {products.map((product, index) => (
                 <div
                   key={product._id}
